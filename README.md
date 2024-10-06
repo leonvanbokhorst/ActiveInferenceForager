@@ -35,3 +35,8 @@ ActiveInferenceForager/
    - On Unix or MacOS: `source venv/bin/activate`
 4. Install the requirements: `pip install -r requirements.txt`
 
+## Usage
+
+## Contributing
+
+## License
