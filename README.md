@@ -36,10 +36,13 @@ ActiveInferenceForager/
 4. Install the requirements: `pip install -r requirements.txt`
 
 ## Usage
+
 To use this project, run `python main.py` with appropriate arguments.
 
 ## Contributing
+
 Contributions are welcome. Please fork the repository and submit a pull request.
 
 ## License
+
 This project is licensed under the MIT License. See LICENSE file for details.
