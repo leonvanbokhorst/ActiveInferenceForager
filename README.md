@@ -4,7 +4,7 @@ An adaptive AI agent implementing the Free Energy Principle and Active Inference
 
 ## Project Structure
 
-```
+```txt
 ActiveInferenceForager/
 │
 ├── src/
@@ -35,14 +35,3 @@ ActiveInferenceForager/
    - On Unix or MacOS: `source venv/bin/activate`
 4. Install the requirements: `pip install -r requirements.txt`
 
-## Usage
-
-[Provide basic usage instructions here]
-
-## Contributing
-
-[Provide contribution guidelines here]
-
-## License
-
-[Specify the license here]
