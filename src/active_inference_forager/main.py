@@ -1,79 +1,99 @@
 import numpy as np
-from active_inference_forager.agents.environment import Environment
-from active_inference_forager.agents.advanced_fep_agent import AdvancedFEPAgent
-from active_inference_forager.agents.belief_node import BeliefNode
-from pydantic import Field
+import logging
+import matplotlib.pyplot as plt
+from typing import Tuple, List
+from active_inference_forager.agents.environment import SimpleEnvironment
+from active_inference_forager.agents.advanced_fep_agent import (
+    DQNFEPAgent,
+)
 
 
-class SimpleEnvironment(Environment):
-    max_steps: int = Field(default=100)
-    steps: int = Field(default=0)
+def train_agent(
+    agent: DQNFEPAgent,
+    env: SimpleEnvironment,
+    n_episodes: int,
+    early_stop_threshold: float = 1e-5,
+    patience: int = 1000,
+) -> Tuple[List[float], List[int]]:
+    rewards_history = []
+    steps_history = []
+    best_reward = float("-inf")
+    patience_counter = 0
 
-    def __init__(self, **data):
-        super().__init__(state_dim=2, action_dim=2, **data)
-        self.state = np.zeros(2)
-        self.reset()
-
-    def step(self, action):
-        self.state += action
-        distance = np.linalg.norm(self.state)
-        reward = -distance * 0.1  # Scaled reward
-        self.steps += 1
-        done = distance < 0.1 or self.steps >= self.max_steps
-        return self.state, reward, done
-
-    def reset(self):
-        self.state = np.random.uniform(-1, 1, 2)
-        self.steps = 0
-        return self.state
-
-
-def main():
-    env = SimpleEnvironment()
-    action_space = np.array(
-        [
-            [-0.1, 0],
-            [0.1, 0],
-            [0, -0.1],
-            [0, 0.1],
-            [-0.1, -0.1],
-            [-0.1, 0.1],
-            [0.1, -0.1],
-            [0.1, 0.1],
-        ]
-    )
-    agent = AdvancedFEPAgent(
-        root_belief=BeliefNode(mean=np.zeros(2), precision=np.eye(2)),
-        action_space=action_space,
-        state_dim=2,
-        learning_rate=0.1,  # Increased from 0.01
-        exploration_factor=0.2,  # Increased from 0.1
-        discount_factor=0.99,  # Slightly increased
-    )
-
-    n_episodes = 1000
     for episode in range(n_episodes):
         state = env.reset()
         total_reward = 0
         done = False
-        step = 0
+        steps = 0
+
         while not done:
             action = agent.take_action(state)
             next_state, reward, done = env.step(action)
-            agent.learn(state, action, next_state, reward)
+            agent.learn(state, action, next_state, reward, done)
             state = next_state
             total_reward += reward
-            step += 1
-            if step % 10 == 0:
-                print(
-                    f"Episode {episode + 1}/{n_episodes}, Step {step}, Total Reward: {total_reward:.2f}"
-                )
+            steps += 1
 
-        print(
-            f"Episode {episode + 1}/{n_episodes} finished. Total Reward: {total_reward:.2f}"
-        )
+        rewards_history.append(total_reward)
+        steps_history.append(steps)
 
-    print("Training completed.")
+        # Early stopping
+        if total_reward > best_reward:
+            best_reward = total_reward
+            patience_counter = 0
+        else:
+            patience_counter += 1
+
+        if patience_counter >= patience and best_reward > early_stop_threshold:
+            print(f"Early stopping at episode {episode}")
+            break
+
+        if episode % 10 == 0:
+            avg_reward = np.mean(rewards_history[-10:])
+            avg_steps = np.mean(steps_history[-10:])
+            print(
+                f"Episode {episode}, Avg Reward: {avg_reward:.2f}, Avg Steps: {avg_steps:.1f}, Epsilon: {agent.epsilon:.4f}"
+            )
+
+    return rewards_history, steps_history
+
+
+def main():
+    env = SimpleEnvironment()
+    agent = DQNFEPAgent(
+        state_dim=env.state_dim,
+        action_dim=len(env.action_space),
+        action_space=env.action_space,
+        learning_rate=1e-2,
+        discount_factor=0.99,
+        exploration_decay=0.999,
+    )
+
+    n_episodes = 250000  # Increased number of episodes for DQN learning
+    rewards_history, steps_history = train_agent(agent, env, n_episodes)
+
+    # Plot results
+    plt.figure(figsize=(15, 5))
+    plt.subplot(1, 3, 1)
+    plt.plot(rewards_history)
+    plt.title("Rewards per Episode")
+    plt.xlabel("Episode")
+    plt.ylabel("Total Reward")
+
+    plt.subplot(1, 3, 2)
+    plt.plot(steps_history)
+    plt.title("Steps per Episode")
+    plt.xlabel("Episode")
+    plt.ylabel("Steps")
+
+    plt.subplot(1, 3, 3)
+    plt.plot(np.convolve(rewards_history, np.ones(100) / 100, mode="valid"))
+    plt.title("Moving Average Reward (100 episodes)")
+    plt.xlabel("Episode")
+    plt.ylabel("Average Reward")
+
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
