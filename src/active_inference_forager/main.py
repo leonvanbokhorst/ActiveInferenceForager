@@ -79,12 +79,14 @@ def main():
     plt.title("Rewards per Episode")
     plt.xlabel("Episode")
     plt.ylabel("Total Reward")
+    plt.yscale("symlog")
 
     plt.subplot(1, 3, 2)
     plt.plot(steps_history)
     plt.title("Steps per Episode")
     plt.xlabel("Episode")
     plt.ylabel("Steps")
+    plt.yscale("symlog")
 
     plt.subplot(1, 3, 3)
     plt.plot(np.convolve(rewards_history, np.ones(100) / 100, mode="valid"))
