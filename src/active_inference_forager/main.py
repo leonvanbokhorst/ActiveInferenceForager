@@ -2,7 +2,7 @@ import numpy as np
 import logging
 import matplotlib.pyplot as plt
 from typing import Tuple, List
-from active_inference_forager.agents.environment import SimpleEnvironment
+from active_inference_forager.environments.simple_environment import SimpleEnvironment
 from active_inference_forager.agents.advanced_fep_agent import (
     DQNFEPAgent,
 )
