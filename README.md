@@ -1,6 +1,6 @@
-[![CI](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml/badge.svg)](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml)
-
 # ActiveInferenceForager
+
+[![CI](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml/badge.svg)](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml)
 
 Current iteration of the Active Inference Forager project as of 2021-10-14.
 
