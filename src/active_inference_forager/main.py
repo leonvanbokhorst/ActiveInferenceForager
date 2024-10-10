@@ -1,11 +1,8 @@
 import numpy as np
-import logging
 import matplotlib.pyplot as plt
 from typing import Tuple, List
 from active_inference_forager.environments.simple_environment import SimpleEnvironment
-from active_inference_forager.agents.advanced_fep_agent import (
-    DQNFEPAgent,
-)
+from active_inference_forager.agents.advanced_fep_agent import DQNFEPAgent
 
 
 def train_agent(
@@ -52,7 +49,7 @@ def train_agent(
             avg_reward = np.mean(rewards_history[-10:])
             avg_steps = np.mean(steps_history[-10:])
             print(
-                f"Episode {episode}, Avg Reward: {avg_reward:.2f}, Avg Steps: {avg_steps:.1f}, Epsilon: {agent.epsilon:.4f}"
+                f"Episode {episode}, Avg Reward: {avg_reward:.2f}, Avg Steps: {avg_steps:.1f}, Exploration Rate: {agent.exploration_rate:.4f}"
             )
 
     return rewards_history, steps_history
@@ -64,9 +61,16 @@ def main():
         state_dim=env.state_dim,
         action_dim=len(env.action_space),
         action_space=env.action_space,
-        learning_rate=1e-2,
+        learning_rate=1e-3,
         discount_factor=0.99,
-        exploration_decay=0.999,
+        epsilon_start=1.0,
+        epsilon_end=0.01,
+        epsilon_decay=0.995,
+        batch_size=64,
+        reward_buffer_size=100,
+        max_kl=10.0,
+        max_fe=100.0,
+        belief_regularization=0.01,
     )
 
     n_episodes = 250000  # Increased number of episodes for DQN learning
