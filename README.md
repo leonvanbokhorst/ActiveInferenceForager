@@ -1,3 +1,5 @@
+[![CI](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml/badge.svg)](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml)
+
 # ActiveInferenceForager
 
 An adaptive AI agent implementing the Free Energy Principle and Active Inference in dynamic environments.
