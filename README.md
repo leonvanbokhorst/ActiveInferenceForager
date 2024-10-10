@@ -2,36 +2,110 @@
 
 # ActiveInferenceForager
 
-An adaptive AI agent implementing the Free Energy Principle and Active Inference in dynamic environments.
+Current iteration of the Active Inference Forager project as of 2021-10-14.
 
-## Current state
+This project aims to implement an intelligent chat agent using principles from Active Inference, a neuroscientific theory of brain function and decision-making. We've chosen to enhance our existing Deep Q-Network (DQN) agent with elements of Active Inference, specifically focusing on free energy minimization.
 
-In the ActiveInferenceForager project, we have implemented a DQNFEPAgent that combines Deep Q-Network (DQN) with the Free Energy Principle (FEP) for decision-making and learning within dynamic environments. This project aims to create an adaptive AI agent that implements the Free Energy Principle and Active Inference.
+## Decision-Making Process
 
-### DQNFEPAgent Implementation
-The DQNFEPAgent is implemented in the `DQNFEPAgent` class found in the [advanced_fep_agent.py](src/active_inference_forager/agents/advanced_fep_agent.py) file. Key characteristics include:
-- **Neural Network Architecture**: The DQN uses a multi-layer neural network to approximate the Q-values for state-action pairs.
-- **Experience Replay**: The agent stores past experiences in a replay buffer to break the correlation between consecutive experiences and improve learning stability.
-- **Target Network**: A separate target network is used to provide stable Q-value targets, reducing oscillations during training.
-- **Epsilon-Greedy Policy**: The agent follows an epsilon-greedy policy for action selection, balancing exploration and exploitation.
-- **Belief Updating**: The agent maintains and updates beliefs about the environment based on observations, implementing key concepts from the Free Energy Principle.
-- **Free Energy Calculation**: The agent calculates and minimizes free energy, which drives its learning and decision-making processes.
+We explored three main options for implementing Active Inference in our chat agent:
 
-### Learning Process
-The DQNFEPAgent undergoes a learning process through interaction with the environment:
-1. **Belief Update**: The agent updates its beliefs about the environment based on new observations.
-2. **Free Energy Calculation**: The agent calculates the free energy based on its current beliefs and observations.
-3. **Action Selection**: Based on the current state and beliefs, the agent selects an action using its Q-network and exploration strategy.
-4. **Environment Interaction**: The selected action is applied to the environment, which returns the next state, reward, and a done flag.
-5. **Experience Storage**: The experience (state, action, reward, next state, done) is stored in the replay buffer.
-6. **Batch Learning**: A batch of experiences is sampled from the replay buffer for training the Q-network.
-7. **Q-Value Update**: The Q-values are updated using the Bellman equation, with the loss computed as the difference between current Q-values and target Q-values.
-8. **Exploration Rate Decay**: The exploration rate is decayed over time to reduce exploration and increase exploitation.
+1. Continuous Action Space
+2. Full Active Inference Implementation
+3. Incorporating Free Energy into Current DQN
 
-### Project Context
-In this project, the DQNFEPAgent is designed to explore and adapt in dynamic environments, combining the strengths of DQN and FEP approaches. The application's potential includes robotic navigation, resource management, adaptive user interfaces, financial decision-making, healthcare monitoring, and game AI.
+After careful consideration, we chose Option 3: Incorporating Free Energy into our Current DQN. Here's why:
 
-For more detailed implementation, you can review the relevant code sections:
-- [DQNFEPAgent in advanced_fep_agent.py](src/active_inference_forager/agents/advanced_fep_agent.py)
-- [Training the DQNFEPAgent in main.py](src/active_inference_forager/main.py)
-- [Environment interaction in simple_environment.py](src/active_inference_forager/environments/simple_environment.py)
+### Reasons for Our Choice
+
+1. **Incremental Improvement**: This option allows us to build upon our existing DQN implementation, making it easier to implement and understand the new concepts.
+
+2. **Introduction to Active Inference**: It introduces core Active Inference principles without requiring a complete overhaul of our system.
+
+3. **Balanced Approach**: It provides a good balance between improving the agent's capabilities and maintaining a manageable level of complexity.
+
+4. **Learning Opportunity**: This approach serves as a stepping stone towards more advanced implementations, allowing us to gain experience with Active Inference principles gradually.
+
+5. **Practical Implementation**: Given our current expertise level, this option is the most practical next step in enhancing our chat agent.
+
+## Key Components of the Implementation
+
+1. **Modified Neural Network**: We've updated our DQN to include state prediction, a key component of Active Inference.
+
+2. **Free Energy Minimization**: Our loss function now includes both the traditional TD error and a state prediction error, aligning with the Active Inference principle of minimizing prediction errors.
+
+3. **Flexible Architecture**: We've introduced a `state_prediction_weight` parameter, allowing us to adjust the balance between standard Q-learning and Active Inference components.
+
+4. **Belief and Free Energy Updates**: We've incorporated methods for updating beliefs and free energy, though these are simplified versions that can be expanded upon in future iterations.
+
+## Adapting to Chat Agent Context
+
+To adapt this implementation for a chat agent:
+
+1. **State Representation**: Modify the state to represent the conversation history, current query, and any relevant context.
+2. **Action Space**: Define actions as different types of responses or intents the agent can choose from.
+3. **Reward Function**: Design a reward function that considers user satisfaction, conversation coherence, and task completion.
+
+## Next Steps
+
+1. Implement the modified DQNFEPAgent class as described.
+2. Adjust the main training loop to work with the new agent.
+3. Develop appropriate state representations and action spaces for the chat context.
+4. Create a suitable reward function for evaluating chat agent performance.
+5. Test the implementation and iteratively refine as needed.
+
+## Conclusion
+
+This approach allows us to introduce Active Inference principles into our chat agent gradually. As we become more familiar with these concepts and their implementation, we can further refine our model and potentially move towards a more comprehensive Active Inference framework in the future.
+
+## Decision-Making Process
+
+We explored three main options for implementing Active Inference in our chat agent:
+
+1. Continuous Action Space
+2. Full Active Inference Implementation
+3. Incorporating Free Energy into Current DQN
+
+After careful consideration, we chose Option 3: Incorporating Free Energy into our Current DQN. Here's why:
+
+### Reasons for Our Choice
+
+1. **Incremental Improvement**: This option allows us to build upon our existing DQN implementation, making it easier to implement and understand the new concepts.
+
+2. **Introduction to Active Inference**: It introduces core Active Inference principles without requiring a complete overhaul of our system.
+
+3. **Balanced Approach**: It provides a good balance between improving the agent's capabilities and maintaining a manageable level of complexity.
+
+4. **Learning Opportunity**: This approach serves as a stepping stone towards more advanced implementations, allowing us to gain experience with Active Inference principles gradually.
+
+5. **Practical Implementation**: Given our current expertise level, this option is the most practical next step in enhancing our chat agent.
+
+## Key Components of the Implementation
+
+1. **Modified Neural Network**: We've updated our DQN to include state prediction, a key component of Active Inference.
+
+2. **Free Energy Minimization**: Our loss function now includes both the traditional TD error and a state prediction error, aligning with the Active Inference principle of minimizing prediction errors.
+
+3. **Flexible Architecture**: We've introduced a `state_prediction_weight` parameter, allowing us to adjust the balance between standard Q-learning and Active Inference components.
+
+4. **Belief and Free Energy Updates**: We've incorporated methods for updating beliefs and free energy, though these are simplified versions that can be expanded upon in future iterations.
+
+## Adapting to Chat Agent Context
+
+To adapt this implementation for a chat agent:
+
+1. **State Representation**: Modify the state to represent the conversation history, current query, and any relevant context.
+2. **Action Space**: Define actions as different types of responses or intents the agent can choose from.
+3. **Reward Function**: Design a reward function that considers user satisfaction, conversation coherence, and task completion.
+
+## Next Steps
+
+1. Implement the modified DQNFEPAgent class as described.
+2. Adjust the main training loop to work with the new agent.
+3. Develop appropriate state representations and action spaces for the chat context.
+4. Create a suitable reward function for evaluating chat agent performance.
+5. Test the implementation and iteratively refine as needed.
+
+## Conclusion
+
+This approach allows us to introduce Active Inference principles into our chat agent gradually. As we become more familiar with these concepts and their implementation, we can further refine our model and potentially move towards a more comprehensive Active Inference framework in the future.
