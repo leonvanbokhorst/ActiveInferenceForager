@@ -102,6 +102,11 @@ class DQNFEPAgent(BaseAgent):
         batch = self.replay_buffer.sample(self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
 
+        # Convert lists of numpy arrays to single numpy arrays
+        states = np.array(states)
+        next_states = np.array(next_states)
+
+        # Convert numpy arrays to tensors
         states = torch.FloatTensor(states).to(self.device)
         actions = torch.LongTensor([np.where((self.action_space == action).all(axis=1))[0][0] for action in actions]).to(self.device)
         rewards = torch.FloatTensor(rewards).to(self.device)
