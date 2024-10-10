@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field, model_validator, ConfigDict
 from scipy.stats import entropy
 from collections import deque
 
+from active_inference_forager.agents.base_agent import BaseAgent
 from active_inference_forager.agents.belief_node import BeliefNode
 from active_inference_forager.utils.numpy_fields import NumpyArrayField
-
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -30,35 +30,19 @@ ch.setFormatter(formatter)
 # Add ch to logger
 logger.addHandler(ch)
 
-# # log to file
-# fh = logging.FileHandler("active_inference_forager.log")
-# fh.setLevel(logging.DEBUG)
-# fh.setFormatter(formatter)
-# logger.addHandler(fh)
-
-
-class AdvancedFEPAgent(BaseModel):
-
+class AdvancedFEPAgent(BaseAgent):
     episode_rewards: List[float] = Field(default_factory=list)
     episode_lengths: List[int] = Field(default_factory=list)
     total_steps: int = Field(default=0)
 
-    state_dim: int = Field(default=2)
-    action_dim: int = Field(default=2)
-    root_belief: BeliefNode = Field(default=None)
-    action_space: NumpyArrayField = Field(default=None)
-
-    learning_rate: float = Field(default=0.0001)
-    max_kl: float = Field(default=10.0)  # Increased from 5.0
-    max_fe: float = Field(default=100.0)  # Increased from 50.0
+    max_kl: float = Field(default=10.0)
+    max_fe: float = Field(default=100.0)
     epsilon: float = Field(default=1e-7)
 
-    discount_factor: float = Field(default=0.95)
     initial_exploration_factor: float = Field(default=0.3)
     final_exploration_factor: float = Field(default=0.05)
     exploration_factor: float = Field(default=0.3)
     exploration_decay: float = Field(default=0.995)
-    exploration_rate: float = Field(default=0.1)
 
     initial_mean: NumpyArrayField = Field(default=None)
     initial_precision: NumpyArrayField = Field(default=None)
@@ -81,34 +65,24 @@ class AdvancedFEPAgent(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.initialize_belief_and_action_space()
+
     @model_validator(mode="after")
     def initialize_belief_and_action_space(self):
+        super().initialize_belief_and_action_space()
         if self.initial_mean is None:
             self.initial_mean = np.zeros(self.state_dim)
         if self.initial_precision is None:
             self.initial_precision = np.eye(self.state_dim) * 0.1
 
-        if self.root_belief is None:
-            self.root_belief = BeliefNode(
-                mean=self.initial_mean,
-                precision=self.initial_precision,
-                max_precision=self.max_precision,
-                max_mean=self.max_mean,
-            )
-
-        if self.action_space is None:
-            self.action_space = np.array(
-                [
-                    [-0.1, 0],
-                    [0.1, 0],
-                    [0, -0.1],
-                    [0, 0.1],
-                    [-0.1, -0.1],
-                    [-0.1, 0.1],
-                    [0.1, -0.1],
-                    [0.1, 0.1],
-                ]
-            )
+        self.root_belief = BeliefNode(
+            mean=self.initial_mean,
+            precision=self.initial_precision,
+            max_precision=self.max_precision,
+            max_mean=self.max_mean,
+        )
 
         self.update_free_energy()
         return self
@@ -202,13 +176,6 @@ class AdvancedFEPAgent(BaseModel):
         except np.linalg.LinAlgError:
             return self.max_fe  # Return maximum allowed free energy value
 
-    def take_action(self, state: np.ndarray) -> np.ndarray:
-        q_values = self._calculate_q_values(state)
-        if np.random.random() < self.exploration_rate:
-            return self.action_space[np.random.choice(len(self.action_space))]
-        else:
-            return self.action_space[np.argmax(q_values)]
-
     def _calculate_q_values(self, state: np.ndarray) -> np.ndarray:
         """Calculate Q-values for each action."""
         q_values = np.zeros(len(self.action_space))
@@ -298,9 +265,6 @@ class AdvancedFEPAgent(BaseModel):
         next_state: np.ndarray,
         reward: float,
     ):
-        # logger.debug(
-        #     f"Learning from: State={state}, Action={action}, Next State={next_state}, Reward={reward}"
-        # )
         self.add_to_memory(state, action, next_state, reward)
 
         # Update transition model
@@ -312,12 +276,6 @@ class AdvancedFEPAgent(BaseModel):
 
         # Update free energy
         self.update_free_energy()
-
-        # Log belief statistics
-        # logger.debug(
-        #     f"Updated belief - Mean: {self.root_belief.mean}, Precision: {self.root_belief.precision}"
-        # )
-        # logger.debug(f"Current Free Energy: {self.free_energy}")
 
         # Decay exploration factor
         self.decay_exploration()
@@ -332,11 +290,6 @@ class AdvancedFEPAgent(BaseModel):
             avg_length = (
                 np.mean(self.episode_lengths[-10:]) if self.episode_lengths else 0
             )
-            # logger.info(
-            #     f"Steps: {self.total_steps}, "
-            #     f"Avg Rew: {avg_reward:.2f}, "
-            #     f"Avg Ep Len: {avg_length:.2f}"
-            # )
 
     def learn_from_memory(self, batch_size=32):
         if len(self.memory_buffer) < batch_size:
@@ -455,9 +408,6 @@ class ImprovedAdvancedFEPAgent(AdvancedFEPAgent):
             return self.action_space[np.random.choice(len(self.action_space), p=probs)]
 
 
-# from pydantic import Field
-
-
 class FurtherImprovedAdvancedFEPAgent(ImprovedAdvancedFEPAgent):
     learning_rate: float = Field(default=0.001)
     discount_factor: float = Field(default=0.99)
@@ -544,9 +494,6 @@ class DQN(nn.Module):
 
 
 class DQNFEPAgent(FurtherImprovedAdvancedFEPAgent):
-    state_dim: int = Field(...)
-    action_dim: int = Field(...)
-    action_space: np.ndarray = Field(...)
     replay_buffer: ExperienceReplayBuffer = Field(
         default_factory=lambda: ExperienceReplayBuffer()
     )
@@ -555,7 +502,6 @@ class DQNFEPAgent(FurtherImprovedAdvancedFEPAgent):
     epsilon: float = Field(default=1.0)
     epsilon_decay: float = Field(default=0.995)
     epsilon_min: float = Field(default=0.01)
-    learning_rate: float = Field(default=0.001)
     tau: float = Field(default=0.001)  # For soft update of target network
     device: torch.device = Field(
         default_factory=lambda: torch.device(
