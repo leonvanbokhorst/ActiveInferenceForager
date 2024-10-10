@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from active_inference_forager.agents.advanced_fep_agent import DQNFEPAgent
+from active_inference_forager.agents.dqn_fep_agent import DQNFEPAgent
 
 
 def test_dqnfep_agent_initialization():
