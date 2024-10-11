@@ -2,9 +2,35 @@
 
 [![CI](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml/badge.svg)](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml)
 
-Current iteration of the Active Inference Forager project as of 2021-10-14.
+Current iteration of the Active Inference Forager project as of 2024-10-11.
 
-This project aims to implement an intelligent chat agent using principles from Active Inference, a neuroscientific theory of brain function and decision-making. We've chosen to enhance our existing Deep Q-Network (DQN) agent with elements of Active Inference, specifically focusing on free energy minimization.
+This project aims to implement an intelligent chat agent using principles from Active Inference, a neuroscientific theory of brain function and decision-making. We've enhanced our existing Deep Q-Network (DQN) agent with elements of Active Inference, specifically focusing on free energy minimization.
+
+## Latest Training Results
+
+Analysis of the training results as of 2023-05-21:
+
+### Performance Trends
+
+- **Average Reward**: Fluctuates between 10.79 and 12.86 across the episodes. No clear upward or downward trend, suggesting the agent has reached a relatively stable performance level.
+- **Average Steps**: Consistently around 10, with a few episodes dropping to 9.1-9.8. This indicates the agent is generally completing tasks in a consistent number of steps.
+
+### Consistency
+The agent maintains a high level of consistency in its performance. Most episodes have an average reward above 11, with many in the 12-12.5 range. This suggests the agent is consistently performing well.
+
+### Exploration Rate
+Remains constant at 0.0100 throughout the shown episodes. This indicates the agent has reached the minimum exploration rate set in the training process, focusing more on exploiting its learned policy rather than exploring new actions.
+
+### Early Stopping
+The training stopped at episode 2960, which is earlier than the maximum 10,000 episodes set in the main script. This suggests the early stopping condition was met, indicating the agent achieved a satisfactory level of performance and consistency.
+
+### Overall Performance
+- The agent appears to be performing well, with average rewards consistently above 11 and often above 12. This suggests it has learned effective strategies for the chat environment.
+- The stability in both average reward and steps indicates the agent has converged to a robust policy.
+
+### Potential for Improvement
+- While the performance is stable, there might be room for further optimization. The highest average reward observed (12.86 in episode 2910) suggests the agent can occasionally achieve higher performance.
+- Experimenting with hyperparameters like learning rate, discount factor, or network architecture might lead to even better results.
 
 ## Decision-Making Process
 
