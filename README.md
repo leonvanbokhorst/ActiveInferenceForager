@@ -12,8 +12,8 @@ Analysis of the training results as of 2023-05-21:
 
 ### Performance Trends
 
-- **Average Reward**: Fluctuates between 10.79 and 12.86 across the episodes. No clear upward or downward trend, suggesting the agent has reached a relatively stable performance level.
-- **Average Steps**: Consistently around 10, with a few episodes dropping to 9.1-9.8. This indicates the agent is generally completing tasks in a consistent number of steps.
+ **Average Reward**: Fluctuates between 10.79 and 12.86 across the episodes. No clear upward or downward trend, suggesting the agent has reached a relatively stable performance level.
+ **Average Steps**: Consistently around 10.00, with a few episodes dropping to 9.10-9.80. This indicates the agent is generally completing tasks in a consistent number of steps.
 
 ### Consistency
 The agent maintains a high level of consistency in its performance. Most episodes have an average reward above 11, with many in the 12-12.5 range. This suggests the agent is consistently performing well.
