@@ -28,11 +28,11 @@ class DQN(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(DQN, self).__init__()
         self.network = nn.Sequential(
-            nn.Linear(state_dim, 64),
+            nn.Linear(state_dim, 128),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(64, action_dim),
+            nn.Linear(128, action_dim),
         )
 
     def forward(self, x):
@@ -83,14 +83,14 @@ class DQNFEPAgent(BaseAgent):
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
         self.exploration_rate = self.epsilon_start
 
-    def take_action(self, state: np.ndarray) -> np.ndarray:
+    def take_action(self, state: np.ndarray) -> str:
         if np.random.rand() < self.exploration_rate:
-            return self.action_space[np.random.choice(len(self.action_space))]
+            return np.random.choice(self.action_space)
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         q_values = self.q_network(state_tensor)
         return self.action_space[q_values.argmax().item()]
 
-    def learn(self, state: np.ndarray, action: np.ndarray, next_state: np.ndarray, reward: float, done: bool):
+    def learn(self, state: np.ndarray, action: str, next_state: np.ndarray, reward: float, done: bool):
         self.replay_buffer.add(state, action, reward, next_state, done)
         self.update_belief(next_state)
         self.update_free_energy()
@@ -108,7 +108,7 @@ class DQNFEPAgent(BaseAgent):
 
         # Convert numpy arrays to tensors
         states = torch.FloatTensor(states).to(self.device)
-        actions = torch.LongTensor([np.where((self.action_space == action).all(axis=1))[0][0] for action in actions]).to(self.device)
+        actions = torch.LongTensor([np.where(self.action_space == action)[0][0] for action in actions]).to(self.device)
         rewards = torch.FloatTensor(rewards).to(self.device)
         next_states = torch.FloatTensor(next_states).to(self.device)
         dones = torch.FloatTensor(dones).to(self.device)
@@ -205,7 +205,7 @@ class DQNFEPAgent(BaseAgent):
     def _build_belief_hierarchy(self, node: BeliefNode, level: int):
         if level >= self.max_depth:
             return
-        for i in range(len(self.action_space)):
+        for action in self.action_space:
             child = BeliefNode(
                 mean=np.zeros(self.state_dim),
                 precision=np.eye(self.state_dim) * (0.1 / (level + 1)),
@@ -213,5 +213,34 @@ class DQNFEPAgent(BaseAgent):
                 max_precision=self.max_precision,
                 max_mean=self.max_mean,
             )
-            node.children[f"action_{i}"] = child
+            node.children[action] = child
             self._build_belief_hierarchy(child, level + 1)
+
+    def interpret_action(self, action: str) -> str:
+        """
+        Interpret the agent's action in a human-readable format.
+        """
+        action_interpretations = {
+            "ask_question": "The agent decides to ask a question to gather more information.",
+            "provide_information": "The agent provides relevant information to the user.",
+            "clarify": "The agent attempts to clarify a point or resolve any confusion.",
+            "suggest_action": "The agent suggests a specific action or solution to the user.",
+            "express_empathy": "The agent expresses empathy or understanding towards the user's situation.",
+            "end_conversation": "The agent determines it's appropriate to end the conversation."
+        }
+        return action_interpretations.get(action, f"Unknown action: {action}")
+
+    def process_user_input(self, user_input: str) -> np.ndarray:
+        """
+        Simple natural language processing to extract features from user input.
+        """
+        # This is a very basic implementation and can be expanded with more sophisticated NLP techniques
+        features = np.zeros(5)  # Assuming 5 features for simplicity
+        
+        features[0] = len(user_input.split())  # Number of words
+        features[1] = sum(1 for c in user_input if c == '?') / len(user_input)  # Question mark ratio
+        features[2] = sum(1 for c in user_input if c == '!') / len(user_input)  # Exclamation mark ratio
+        features[3] = len(user_input) / 100  # Normalized length of input
+        features[4] = sum(1 for word in user_input.lower().split() if word in ['please', 'thank', 'thanks', 'appreciate']) / len(user_input.split())  # Politeness ratio
+        
+        return features

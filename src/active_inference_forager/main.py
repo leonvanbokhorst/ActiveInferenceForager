@@ -3,15 +3,15 @@ import matplotlib.pyplot as plt
 from typing import Tuple, List
 import torch
 import os
-from active_inference_forager.environments.simple_environment import SimpleEnvironment
+from active_inference_forager.environments.chat_environment import ChatEnvironment
 from active_inference_forager.agents.dqn_fep_agent import DQNFEPAgent
 
 
 def train_agent(
     agent: DQNFEPAgent,
-    env: SimpleEnvironment,
+    env: ChatEnvironment,
     n_episodes: int,
-    early_stop_threshold: float = 1e-5,
+    early_stop_threshold: float = 0.8,
     patience: int = 1000,
 ) -> Tuple[List[float], List[int]]:
     rewards_history = []
@@ -42,7 +42,7 @@ def train_agent(
         if len(rewards_history) >= 100:
             recent_rewards = rewards_history[-100:]
             avg_reward = np.mean(recent_rewards)
-            consistency = np.sum([r > 50 for r in recent_rewards]) / 100
+            consistency = np.sum([r > 0.5 for r in recent_rewards]) / 100
 
             if avg_reward > best_reward and consistency > consistency_threshold:
                 best_reward = avg_reward
@@ -65,7 +65,7 @@ def train_agent(
     return rewards_history, steps_history
 
 
-def test_agent(agent: DQNFEPAgent, env: SimpleEnvironment, n_episodes: int = 100) -> Tuple[float, float]:
+def test_agent(agent: DQNFEPAgent, env: ChatEnvironment, n_episodes: int = 100) -> Tuple[float, float]:
     test_rewards = []
     test_steps = []
     agent.q_network.eval()  # Set the network to evaluation mode
@@ -95,10 +95,44 @@ def test_agent(agent: DQNFEPAgent, env: SimpleEnvironment, n_episodes: int = 100
 
     avg_reward = np.mean(test_rewards)
     avg_steps = np.mean(test_steps)
-    consistency = np.sum([r > 50 for r in test_rewards]) / n_episodes
+    consistency = np.sum([r > 0.5 for r in test_rewards]) / n_episodes
 
     print(f"Test Results - Avg Reward: {avg_reward:.2f}, Avg Steps: {avg_steps:.2f}, Consistency: {consistency:.2f}")
     return avg_reward, avg_steps
+
+
+def simulate_conversation(agent: DQNFEPAgent, env: ChatEnvironment, max_turns: int = 10):
+    state = env.reset()
+    done = False
+    turn = 0
+
+    print("Starting conversation simulation:")
+    print("----------------------------------")
+
+    while not done and turn < max_turns:
+        action = agent.take_action(state)
+        print(f"Agent: {agent.interpret_action(action)}")
+        
+        # Simulate user input (in a real scenario, this would come from actual user input)
+        user_input = input("User: ")
+        
+        # Process user input and update state
+        user_features = agent.process_user_input(user_input)
+        next_state, reward, done = env.step(action)
+        
+        # Combine environment state with user input features
+        next_state = np.concatenate([next_state, user_features])
+        
+        agent.learn(state, action, next_state, reward, done)
+        state = next_state
+        turn += 1
+
+        print(f"Turn {turn}: Reward = {reward:.2f}")
+        print("----------------------------------")
+
+    print("Conversation ended.")
+    print(f"Final user satisfaction: {env.user_satisfaction:.2f}")
+    print(f"Final task completion: {env.task_completion:.2f}")
 
 
 def save_agent(agent: DQNFEPAgent, path: str):
@@ -123,7 +157,7 @@ def load_agent(agent: DQNFEPAgent, path: str):
 
 
 def main():
-    env = SimpleEnvironment()
+    env = ChatEnvironment()
     agent = DQNFEPAgent(
         state_dim=env.state_dim,
         action_dim=len(env.action_space),
@@ -142,43 +176,42 @@ def main():
 
     model_path = "dqn_fep_agent.pth"
 
-    if os.path.exists(model_path):
-        load_agent(agent, model_path)
-        print("Loaded existing agent. Skipping training.")
-    else:
-        n_episodes = 250000  # Increased number of episodes for DQN learning
-        rewards_history, steps_history = train_agent(agent, env, n_episodes)
+    # Force retraining
+    print("Starting training...")
+    n_episodes = 10000  # Reduced number of episodes for faster training
+    rewards_history, steps_history = train_agent(agent, env, n_episodes)
 
-        # Save the trained agent
-        save_agent(agent, model_path)
+    # Save the trained agent
+    save_agent(agent, model_path)
 
-        # Plot results
-        plt.figure(figsize=(15, 5))
-        plt.subplot(1, 3, 1)
-        plt.plot(rewards_history)
-        plt.title("Rewards per Episode")
-        plt.xlabel("Episode")
-        plt.ylabel("Total Reward")
-        plt.yscale("symlog")
+    # Plot results
+    plt.figure(figsize=(15, 5))
+    plt.subplot(1, 3, 1)
+    plt.plot(rewards_history)
+    plt.title("Rewards per Episode")
+    plt.xlabel("Episode")
+    plt.ylabel("Total Reward")
 
-        plt.subplot(1, 3, 2)
-        plt.plot(steps_history)
-        plt.title("Steps per Episode")
-        plt.xlabel("Episode")
-        plt.ylabel("Steps")
-        plt.yscale("symlog")
+    plt.subplot(1, 3, 2)
+    plt.plot(steps_history)
+    plt.title("Steps per Episode")
+    plt.xlabel("Episode")
+    plt.ylabel("Steps")
 
-        plt.subplot(1, 3, 3)
-        plt.plot(np.convolve(rewards_history, np.ones(100) / 100, mode="valid"))
-        plt.title("Moving Average Reward (100 episodes)")
-        plt.xlabel("Episode")
-        plt.ylabel("Average Reward")
+    plt.subplot(1, 3, 3)
+    plt.plot(np.convolve(rewards_history, np.ones(100) / 100, mode="valid"))
+    plt.title("Moving Average Reward (100 episodes)")
+    plt.xlabel("Episode")
+    plt.ylabel("Average Reward")
 
-        plt.tight_layout()
-        plt.show()
+    plt.tight_layout()
+    plt.show()
 
     # Test the agent
     test_agent(agent, env)
+
+    # Simulate a conversation with the trained agent
+    simulate_conversation(agent, env)
 
 
 if __name__ == "__main__":
