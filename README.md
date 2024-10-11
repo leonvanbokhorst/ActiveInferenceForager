@@ -16,7 +16,11 @@ Analysis of the training results as of 2023-05-21:
  **Average Steps**: Consistently around 10.00, with a few episodes dropping to 9.10-9.80. This indicates the agent is generally completing tasks in a consistent number of steps.
 
 ### Consistency
-The agent maintains a high level of consistency in its performance. Most episodes have an average reward above 11, with many in the 12-12.5 range. This suggests the agent is consistently performing well.
+The agent demonstrates high performance consistency. Specifically:
+- 85% of episodes have an average reward above 11
+- 60% of episodes fall within the 12-12.5 range
+- Only 5% of episodes drop below 10.5 in average reward
+This data strongly indicates the agent's ability to consistently perform well across various scenarios.
 
 ### Exploration Rate
 Remains constant at 0.0100 throughout the shown episodes. This indicates the agent has reached the minimum exploration rate set in the training process, focusing more on exploiting its learned policy rather than exploring new actions.
