@@ -83,15 +83,21 @@ class DQNFEPAgent(BaseAgent):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.initialize_belief_and_action_space()
-        self.q_network = DQN(self.state_dim, len(self.action_space)).to(self.device)
-        self.target_network = DQN(self.state_dim, len(self.action_space)).to(
-            self.device
+    def __init__(self, state_dim: int, action_dim: int, **kwargs):
+        super().__init__(state_dim=state_dim, action_dim=action_dim, **kwargs)
+
+        # Initialize root belief with correct dimensions
+        self.root_belief = BeliefNode(
+            mean=np.zeros(state_dim), precision=np.eye(state_dim) * 0.1
         )
+
+        # Initialize DQN components
+        self.q_network = self._build_network()
+        self.target_network = self._build_network()
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
+
+        self.initialize_belief_and_action_space()
         self.exploration_rate = self.epsilon_start
 
     def take_action(self, state: np.ndarray) -> str:
@@ -113,7 +119,7 @@ class DQNFEPAgent(BaseAgent):
         self.update_belief(next_state)
         self.update_free_energy()
         self.update_reward_buffer(reward)
-        self.total_steps += 1  # Increment total_steps for every call to learn
+        self.total_steps += 1
 
         if len(self.replay_buffer) < self.batch_size:
             return
@@ -128,7 +134,7 @@ class DQNFEPAgent(BaseAgent):
         # Convert numpy arrays to tensors
         states = torch.FloatTensor(states).to(self.device)
         actions = torch.LongTensor(
-            [np.where(self.action_space == action)[0][0] for action in actions]
+            [self.action_space.index(action) for action in actions]
         ).to(self.device)
         rewards = torch.FloatTensor(rewards).to(self.device)
         next_states = torch.FloatTensor(next_states).to(self.device)
@@ -173,6 +179,15 @@ class DQNFEPAgent(BaseAgent):
 
     def update_free_energy(self):
         self.free_energy = self._calculate_free_energy_recursive(self.root_belief)
+
+    def _build_network(self):
+        return nn.Sequential(
+            nn.Linear(self.state_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, self.action_dim),
+        )
 
     def _calculate_free_energy_recursive(self, node: BeliefNode) -> float:
         kl_divergence = self._kl_divergence(node)
