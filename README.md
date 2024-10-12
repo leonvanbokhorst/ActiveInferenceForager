@@ -14,6 +14,4 @@ At its core, the Free Energy Principle says that all living things have a basic 
 
 Active Inference is a way of explaining how living things, like humans and animals, interact with the world by constantly updating their understanding of it and acting to reduce uncertainty. Think of it as a process where your brain makes guesses about what's going on around you and then adjusts those guesses based on what it senses.
 
-Here's a simple analogy: Imagine you're reaching into your pocket to find your phone. Your brain already has an idea of what the phone should feel like (that's your "prediction"). As you feel around, you're gathering sensory information (like touch) to confirm if your guess is right. If the object you touch doesn’t match your expectation (it feels like keys instead), your brain updates its guess, and you keep searching until the sensation matches the phone.
-
-Active Inference Q&A section: [docs/active-inference-qa.md](docs/active-inference-qa.md)
+> Active Inference Q&A section: [docs/active-inference-qa.md](docs/active-inference-qa.md)
