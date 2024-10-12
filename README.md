@@ -6,6 +6,8 @@ Current iteration of the Active Inference Forager project as of 2024-10-11.
 
 This project aims to implement an intelligent chat agent using principles from Active Inference, a neuroscientific theory of brain function and decision-making. We've enhanced our existing Deep Q-Network (DQN) agent with elements of Active Inference, specifically focusing on free energy minimization.
 
+Active Inference Q&A section: [docs/active-inference-qa.md](docs/active-inference-qa.md)
+
 ## Latest Training Results
 
 Analysis of the training results as of 2023-05-21:
