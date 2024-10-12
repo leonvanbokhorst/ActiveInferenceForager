@@ -215,7 +215,7 @@ def main():
     print(f"Agent root belief mean shape: {agent.root_belief.mean.shape}")
     print(f"Agent root belief precision shape: {agent.root_belief.precision.shape}")
 
-    model_path = "philosophy_tutor_agent.pth"
+    model_path = "./models/philosophy_tutor_agent.pth"
 
     print("Starting training...")
     n_episodes = 1000  # Reduced number of episodes for faster training
