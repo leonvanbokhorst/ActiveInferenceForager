@@ -11,6 +11,7 @@ from active_inference_forager.agents.base_agent import BaseAgent
 from active_inference_forager.agents.belief_node import BeliefNode
 from active_inference_forager.utils.numpy_fields import NumpyArrayField
 
+
 class ExperienceReplayBuffer:
     def __init__(self, capacity=10000):
         self.buffer = deque(maxlen=capacity)
@@ -23,6 +24,7 @@ class ExperienceReplayBuffer:
 
     def __len__(self):
         return len(self.buffer)
+
 
 class DQN(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -38,6 +40,7 @@ class DQN(nn.Module):
     def forward(self, x):
         return self.network(x)
 
+
 class DQNFEPAgent(BaseAgent):
     # FEP-related parameters
     max_kl: float = Field(default=10.0)
@@ -52,14 +55,20 @@ class DQNFEPAgent(BaseAgent):
     free_energy: float = Field(default=0.0)
 
     # DQN-related parameters
-    replay_buffer: ExperienceReplayBuffer = Field(default_factory=lambda: ExperienceReplayBuffer())
+    replay_buffer: ExperienceReplayBuffer = Field(
+        default_factory=lambda: ExperienceReplayBuffer()
+    )
     batch_size: int = Field(default=64)
     gamma: float = Field(default=0.99)
     epsilon_start: float = Field(default=1.0)
     epsilon_end: float = Field(default=0.01)
     epsilon_decay: float = Field(default=0.995)
     tau: float = Field(default=0.001)  # For soft update of target network
-    device: torch.device = Field(default_factory=lambda: torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+    device: torch.device = Field(
+        default_factory=lambda: torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
+    )
 
     q_network: DQN = Field(default=None)
     target_network: DQN = Field(default=None)
@@ -78,7 +87,9 @@ class DQNFEPAgent(BaseAgent):
         super().__init__(**data)
         self.initialize_belief_and_action_space()
         self.q_network = DQN(self.state_dim, len(self.action_space)).to(self.device)
-        self.target_network = DQN(self.state_dim, len(self.action_space)).to(self.device)
+        self.target_network = DQN(self.state_dim, len(self.action_space)).to(
+            self.device
+        )
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
         self.exploration_rate = self.epsilon_start
@@ -90,11 +101,19 @@ class DQNFEPAgent(BaseAgent):
         q_values = self.q_network(state_tensor)
         return self.action_space[q_values.argmax().item()]
 
-    def learn(self, state: np.ndarray, action: str, next_state: np.ndarray, reward: float, done: bool):
+    def learn(
+        self,
+        state: np.ndarray,
+        action: str,
+        next_state: np.ndarray,
+        reward: float,
+        done: bool,
+    ):
         self.replay_buffer.add(state, action, reward, next_state, done)
         self.update_belief(next_state)
         self.update_free_energy()
         self.update_reward_buffer(reward)
+        self.total_steps += 1  # Increment total_steps for every call to learn
 
         if len(self.replay_buffer) < self.batch_size:
             return
@@ -108,7 +127,9 @@ class DQNFEPAgent(BaseAgent):
 
         # Convert numpy arrays to tensors
         states = torch.FloatTensor(states).to(self.device)
-        actions = torch.LongTensor([np.where(self.action_space == action)[0][0] for action in actions]).to(self.device)
+        actions = torch.LongTensor(
+            [np.where(self.action_space == action)[0][0] for action in actions]
+        ).to(self.device)
         rewards = torch.FloatTensor(rewards).to(self.device)
         next_states = torch.FloatTensor(next_states).to(self.device)
         dones = torch.FloatTensor(dones).to(self.device)
@@ -125,7 +146,6 @@ class DQNFEPAgent(BaseAgent):
 
         self.soft_update_target_network()
         self.decay_exploration()
-        self.total_steps += 1
 
     def update_belief(self, observation: np.ndarray) -> None:
         self._update_belief_recursive(self.root_belief, observation)
@@ -133,7 +153,9 @@ class DQNFEPAgent(BaseAgent):
 
     def _update_belief_recursive(self, node: BeliefNode, observation: np.ndarray):
         prediction_error = observation - node.mean
-        node.precision += np.outer(prediction_error, prediction_error) * self.learning_rate
+        node.precision += (
+            np.outer(prediction_error, prediction_error) * self.learning_rate
+        )
         node.precision = np.clip(node.precision, self.min_precision, self.max_precision)
 
         precision_inv = np.linalg.inv(node.precision + np.eye(node.dim) * self.epsilon)
@@ -145,7 +167,9 @@ class DQNFEPAgent(BaseAgent):
 
     def _regularize_beliefs(self):
         self.root_belief.mean *= 1 - self.belief_regularization
-        self.root_belief.precision += np.eye(self.root_belief.dim) * self.belief_regularization
+        self.root_belief.precision += (
+            np.eye(self.root_belief.dim) * self.belief_regularization
+        )
 
     def update_free_energy(self):
         self.free_energy = self._calculate_free_energy_recursive(self.root_belief)
@@ -166,7 +190,9 @@ class DQNFEPAgent(BaseAgent):
 
             kl = 0.5 * (
                 np.trace(prior_precision @ node_cov)
-                + (prior_mean - node.mean).T @ prior_precision @ (prior_mean - node.mean)
+                + (prior_mean - node.mean).T
+                @ prior_precision
+                @ (prior_mean - node.mean)
                 - node.dim
                 + np.log(np.linalg.det(node.precision) / np.linalg.det(prior_precision))
             )
@@ -181,11 +207,17 @@ class DQNFEPAgent(BaseAgent):
             self.reward_buffer.pop(0)
 
     def soft_update_target_network(self):
-        for target_param, local_param in zip(self.target_network.parameters(), self.q_network.parameters()):
-            target_param.data.copy_(self.tau * local_param.data + (1.0 - self.tau) * target_param.data)
+        for target_param, local_param in zip(
+            self.target_network.parameters(), self.q_network.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * local_param.data + (1.0 - self.tau) * target_param.data
+            )
 
     def decay_exploration(self):
-        self.exploration_rate = max(self.epsilon_end, self.exploration_rate * self.epsilon_decay)
+        self.exploration_rate = max(
+            self.epsilon_end, self.exploration_rate * self.epsilon_decay
+        )
 
     def reset(self):
         self.root_belief = BeliefNode(
@@ -226,7 +258,7 @@ class DQNFEPAgent(BaseAgent):
             "clarify": "The agent attempts to clarify a point or resolve any confusion.",
             "suggest_action": "The agent suggests a specific action or solution to the user.",
             "express_empathy": "The agent expresses empathy or understanding towards the user's situation.",
-            "end_conversation": "The agent determines it's appropriate to end the conversation."
+            "end_conversation": "The agent determines it's appropriate to end the conversation.",
         }
         return action_interpretations.get(action, f"Unknown action: {action}")
 
@@ -236,11 +268,25 @@ class DQNFEPAgent(BaseAgent):
         """
         # This is a very basic implementation and can be expanded with more sophisticated NLP techniques
         features = np.zeros(5)  # Assuming 5 features for simplicity
-        
-        features[0] = len(user_input.split())  # Number of words
-        features[1] = sum(1 for c in user_input if c == '?') / len(user_input)  # Question mark ratio
-        features[2] = sum(1 for c in user_input if c == '!') / len(user_input)  # Exclamation mark ratio
+
+        words = user_input.split()
+        features[0] = len(words)  # Number of words
+        features[1] = user_input.count("?") / len(words)  # Question mark ratio
+        features[2] = user_input.count("!") / len(words)  # Exclamation mark ratio
         features[3] = len(user_input) / 100  # Normalized length of input
-        features[4] = sum(1 for word in user_input.lower().split() if word in ['please', 'thank', 'thanks', 'appreciate']) / len(user_input.split())  # Politeness ratio
-        
+        features[4] = sum(
+            1
+            for word in words
+            if word.lower() in ["please", "thank", "thanks", "appreciate"]
+        ) / len(
+            words
+        )  # Politeness ratio
+
+        # Debug print statements
+        print(f"Debug: Input string: '{user_input}'")
+        print(f"Debug: Word count: {len(words)}")
+        print(f"Debug: Question mark count: {user_input.count('?')}")
+        print(f"Debug: Exclamation mark count: {user_input.count('!')}")
+        print(f"Debug: Features: {features}")
+
         return features
