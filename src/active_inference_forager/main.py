@@ -9,6 +9,7 @@ from active_inference_forager.active_inference_agent import ActiveInferenceAgent
 logging.basicConfig(filename=LOG_FILE, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
+
 def main(model: Optional[str] = None) -> None:
     if model == "mock" or model is None:
         llm = MockLLM()
@@ -16,11 +17,9 @@ def main(model: Optional[str] = None) -> None:
         raise ValueError(f"Unsupported model: {model}")
 
     agent = ActiveInferenceAgent(llm)
-    agent.user_model.load_from_file("user_model.json")
+    agent.load_user_model(USER_MODEL_PATH)
 
-    print(
-        "Welcome to the FEP-based Conversational AI. Type 'exit' to end the conversation."
-    )
+    print(WELCOME_MESSAGE)
 
     try:
         while True:
@@ -30,11 +29,20 @@ def main(model: Optional[str] = None) -> None:
 
             response = agent.process_user_input(user_input)
             print(f"AI: {response}")
+
+            # Print some debug information
+            predicted_topic = agent.fep_predictor.predict_next_topic()
+            confidence = agent.fep_predictor.get_prediction_confidence()
+            print(
+                f"Debug: Predicted topic: {predicted_topic}, Confidence: {confidence:.2f}"
+            )
+
     except KeyboardInterrupt:
         print("\nConversation interrupted by user.")
     finally:
-        agent.user_model.save_to_file("user_model.json")
-        print("Thank you for using the FEP-based Conversational AI. Goodbye!")
+        agent.save_user_model(USER_MODEL_PATH)
+        print(GOODBYE_MESSAGE)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the FEP-based Conversational AI")
