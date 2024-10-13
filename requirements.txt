@@ -3,3 +3,4 @@ scipy
 pytest
 openai
 python-dotenv
+scikit-learn

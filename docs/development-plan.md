@@ -16,6 +16,8 @@ Developing an AI assistant that integrates the Free Energy Principle (FEP), Acti
 
 ### 1. Foundation: FEP-Based Conversational Framework
 
+See [Stage 1: Laying the Foundations for a Basic FEP-Based Conversational AI](stage-1-Foundation-fep-based-conversational-framework.md)
+
 - Focus: Implementing basic FEP principles in conversation management
 - Key Concepts: Predictive processing, surprise minimization
 - LLM Integration: Use LLM for natural language understanding and generation
@@ -46,6 +48,8 @@ Developing an AI assistant that integrates the Free Energy Principle (FEP), Acti
 - **Foundation for Personalization**: Set the stage for more advanced user modeling.
 
 ### 2. Active Inference in User Modeling
+
+See [Stage 2: Implementing Active Inference in User Modeling](stage-2-active-inference-in-user-modeling.md)
 
 - Focus: Implementing active learning to build and refine user models
 - Key Concepts: Uncertainty-driven exploration, belief updating
