@@ -163,7 +163,9 @@ class DQNFEPAgent(BaseAgent):
 
     def _update_belief_recursive(self, node: BeliefNode, observation: np.ndarray):
         # Ensure observation is a numpy array of floats
-        observation = np.asarray(observation, dtype=np.float64)
+        observation = np.asarray(observation)
+        if observation.dtype != node.mean.dtype:
+            observation = observation.astype(node.mean.dtype)
         
         prediction_error = observation - node.mean
         node.precision += (
