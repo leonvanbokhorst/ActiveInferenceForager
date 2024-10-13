@@ -1,5 +1,7 @@
 # Active Inference Forager
 
+[![CI](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml/badge.svg)](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml)
+
 Active Inference Forager is a conversational AI system based on the Free Energy Principle (FEP) and Active Inference. This project implements a basic framework for a FEP-based conversational AI as part of Stage 1 development.
 
 ## Features

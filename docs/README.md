@@ -31,4 +31,4 @@ This project is currently in stage 1, which focuses on laying the foundation for
 - Stage 3: Adaptive Learning and Personalization
 - Stage 4: Multi-Modal Interaction and Embodied Cognition
 
-For more details on the development plan, please refer to the [development-plan.md](docs/development-plan.md) file.
+For more details on the development plan, please refer to the [development-plan.md](/docs/development-plan.md) file.
