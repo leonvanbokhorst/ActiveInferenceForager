@@ -1,19 +1,34 @@
-# ActiveInferenceForager Documentation
+# Active Inference Forager
 
-This repository contains the documentation for the ActiveInferenceForager project. The project aims to explore the integration of Friston's Free Energy Principle (FEP) and Active Inference with Large Language Models (LLMs) for various AI applications.
+## Project Overview
+The Active Inference Forager is a conversational AI assistant that leverages the principles of Active Inference to engage in natural language interactions with users. The goal of this project is to create a foundation for a conversational AI system that can adapt to user preferences and evolve its communication strategies over time.
 
-## Overview
+## Architecture
+The project follows a modular and scalable architecture, with the following key components:
 
-The ActiveInferenceForager project is an open-source initiative to develop AI systems that embody the principles of FEP and Active Inference. The project aims to explore the integration of these principles with Large Language Models (LLMs) to create AI systems that can learn and adapt to their environment.
+- **ActiveInferenceAgent**: Responsible for processing user input, generating responses, and managing the overall conversation flow.
+- **ConversationManager**: Maintains the conversation history and provides methods for adding and retrieving messages.
+- **FEPPredictor**: Implements the basic Free Energy Principle (FEP)-based prediction logic to anticipate user inputs and minimize surprise.
+- **LLMInterface**: Defines the contract for interacting with the Large Language Model (LLM) used for content generation.
+- **UserModel**: Manages the user's preferences and state, which are essential for adaptive learning and personalization.
+- **FeedbackManager**: Collects user feedback, which can be used to inform future improvements and adaptations.
+- **DataManager**: Provides a flexible data storage solution, currently using MongoDB, to support the evolving data requirements of the project.
 
-## Documents
+## Development Environment Setup
+1. Install Python 3.12 (or the latest version)
+2. Create a virtual environment and activate it
+3. Install the project dependencies: `pip install -r requirements.txt`
+4. Run the unit tests: `pytest tests/unit`
+5. Start the application: `python src/active_inference_forager/main.py`
 
-The documentation is organized into the following sections:
+## Contributing
+We welcome contributions to the Active Inference Forager project. Please follow the guidelines outlined in the [CONTRIBUTING.md](CONTRIBUTING.md) file.
 
-- [Development Plan](docs/development-plan.md): Outlines the integrated development plan for the project.
-- [FEP and Active Inference QA](docs/active-inference-qa.md): Provides an overview of FEP and Active Inference concepts in QA form.
+## Roadmap
+This project is currently in stage 1, which focuses on laying the foundation for the FEP-based conversational framework. Future stages will build upon this foundation, incorporating more advanced features such as:
 
-### Stages
+- Stage 2: Active Inference in User Modeling
+- Stage 3: Adaptive Learning and Personalization
+- Stage 4: Multi-Modal Interaction and Embodied Cognition
 
-- [Stage 1](docs/stage-1-foundation-fep-based-conversational-framework.md): Establishes the foundation for a FEP-based conversational AI system.
-- [Stage 2](docs/stage-2-user-modeling-and-personalization.md): Focuses on user modeling and personalization in the AI system.
+For more details on the development plan, please refer to the [development-plan.md](docs/development-plan.md) file.
