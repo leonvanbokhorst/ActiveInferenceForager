@@ -1,17 +1,71 @@
-# ActiveInferenceForager
+# Active Inference Forager
 
 [![CI](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml/badge.svg)](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/ci.yml)
 
-This project aims to implement an intelligent chat agent using principles from Active Inference, a neuroscientific theory of brain function and decision-making. We've enhanced our existing Deep Q-Network (DQN) agent with elements of Active Inference, specifically focusing on free energy minimization.
+Active Inference Forager is a conversational AI system based on the Free Energy Principle (FEP) and Active Inference. This project implements a basic framework for a FEP-based conversational AI as part of Stage 1 development.
 
-## What is the Free Energy Principle?
+## Features
 
-The Free Energy Principle is a theory that explains how living systems, like humans and animals, maintain themselves and adapt to their environment by minimizing "free energy." In simple terms, it's about how organisms, from the brain to single cells, try to stay in a predictable, stable state by reducing uncertainty or "surprise" about the world around them.
+- Conversation management
+- User modeling
+- FEP-based topic prediction
+- Mock LLM integration (extensible for real LLM integration)
+- Basic logging and error handling
 
-At its core, the Free Energy Principle says that all living things have a basic goal: to avoid states that could harm them or make them less likely to survive. They do this by continuously making predictions about their environment and comparing these predictions with what they actually sense (through sight, sound, touch, etc.). When there’s a mismatch—when the world surprises us—our brain (or even simpler systems in the body) works to correct that, either by updating our beliefs (what we think is happening) or by acting to change the situation to match our expectations.
+## Installation
 
-## What is Active Inference?
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/ActiveInferenceForager.git
+   cd ActiveInferenceForager
+   ```
 
-Active Inference is a way of explaining how living things, like humans and animals, interact with the world by constantly updating their understanding of it and acting to reduce uncertainty. Think of it as a process where your brain makes guesses about what's going on around you and then adjusts those guesses based on what it senses.
+2. Create a virtual environment and activate it:
+   ```
+   python -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+   ```
 
-> Active Inference Q&A section: [docs/active-inference-qa.md](docs/active-inference-qa.md)
+3. Install the required packages:
+   ```
+   pip install -r requirements.txt
+   ```
+
+## Usage
+
+To run the conversational AI:
+
+```
+python src/active_inference_forager/main.py
+```
+
+You can specify a different LLM model (when implemented) using the `--model` argument:
+
+```
+python src/active_inference_forager/main.py --model mock
+```
+
+## Running Tests
+
+To run the test suite:
+
+```
+python -m unittest discover tests
+```
+
+## Project Structure
+
+- `src/active_inference_forager/`: Main source code directory
+  - `main.py`: Core implementation of the conversational AI
+  - `llm_interface.py`: LLM interface and implementations
+  - `config.py`: Configuration settings
+- `tests/`: Test suite directory
+- `docs/`: Project documentation
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License.
