@@ -12,3 +12,8 @@ The documentation is organized into the following sections:
 
 - [Development Plan](docs/development-plan.md): Outlines the integrated development plan for the project.
 - [FEP and Active Inference QA](docs/active-inference-qa.md): Provides an overview of FEP and Active Inference concepts in QA form.
+
+### Stages
+
+- [Stage 1](docs/stage-1-foundation-fep-based-conversational-framework.md): Establishes the foundation for a FEP-based conversational AI system.
+- [Stage 2](docs/stage-2-user-modeling-and-personalization.md): Focuses on user modeling and personalization in the AI system.
