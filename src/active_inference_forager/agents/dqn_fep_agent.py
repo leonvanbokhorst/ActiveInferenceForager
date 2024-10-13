@@ -154,10 +154,19 @@ class DQNFEPAgent(BaseAgent):
         self.decay_exploration()
 
     def update_belief(self, observation: np.ndarray) -> None:
+        # Validate that observation is numeric
+        if not np.issubdtype(observation.dtype, np.number):
+            raise ValueError("Observation must be a numeric array.")
+        
         self._update_belief_recursive(self.root_belief, observation)
         self._regularize_beliefs()
 
     def _update_belief_recursive(self, node: BeliefNode, observation: np.ndarray):
+        # Ensure observation is a numpy array of floats
+        observation = np.asarray(observation)
+        if observation.dtype != node.mean.dtype:
+            observation = observation.astype(node.mean.dtype)
+        
         prediction_error = observation - node.mean
         node.precision += (
             np.outer(prediction_error, prediction_error) * self.learning_rate
@@ -296,6 +305,9 @@ class DQNFEPAgent(BaseAgent):
         ) / len(
             words
         )  # Politeness ratio
+
+        # Ensure features are of type float
+        features = features.astype(float)
 
         # Debug print statements
         print(f"Debug: Input string: '{user_input}'")

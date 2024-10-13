@@ -149,7 +149,13 @@ def simulate_conversation(
 
         next_state, reward, done = env.step(action)
 
-        agent.update_belief(user_input)
+        # Process user input into numerical features
+        # create a variable with a np.array with three random values between 0.0 and 1.0
+        placeholder_user_input = np.random.rand(10)
+
+        processed_input = agent.process_user_input(placeholder_user_input)  # user_input
+        agent.update_belief(processed_input)
+
         state = next_state
         turn += 1
 
