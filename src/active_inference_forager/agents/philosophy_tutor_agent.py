@@ -1,10 +1,10 @@
 import numpy as np
 from typing import Dict, List
 from pydantic import Field
-from active_inference_forager.agents.dqn_fep_agent import DQNFEPAgent
+from active_inference_forager.agents.generic_agent import GenericAgent
 
 
-class PhilosophyTutorAgent(DQNFEPAgent):
+class PhilosophyTutorAgent(GenericAgent):
     knowledge_base: Dict[str, Dict] = Field(default_factory=dict)
 
     def __init__(self, state_dim: int, action_dim: int, **kwargs):

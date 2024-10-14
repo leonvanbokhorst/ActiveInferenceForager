@@ -9,7 +9,6 @@ import random
 
 from active_inference_forager.agents.base_agent import BaseAgent
 from active_inference_forager.agents.belief_node import BeliefNode
-from active_inference_forager.utils.numpy_fields import NumpyArrayField
 
 
 class ExperienceReplayBuffer:
@@ -41,7 +40,7 @@ class DQN(nn.Module):
         return self.network(x)
 
 
-class DQNFEPAgent(BaseAgent):
+class GenericAgent(BaseAgent):
     # FEP-related parameters
     max_kl: float = Field(default=10.0)
     max_fe: float = Field(default=100.0)
@@ -86,12 +85,10 @@ class DQNFEPAgent(BaseAgent):
     def __init__(self, state_dim: int, action_dim: int, **kwargs):
         super().__init__(state_dim=state_dim, action_dim=action_dim, **kwargs)
 
-        # Initialize root belief with correct dimensions
         self.root_belief = BeliefNode(
             mean=np.zeros(state_dim), precision=np.eye(state_dim) * 0.1
         )
 
-        # Initialize DQN components
         self.q_network = self._build_network()
         self.target_network = self._build_network()
         self.target_network.load_state_dict(self.q_network.state_dict())
@@ -127,11 +124,9 @@ class DQNFEPAgent(BaseAgent):
         batch = self.replay_buffer.sample(self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
 
-        # Convert lists of numpy arrays to single numpy arrays
         states = np.array(states)
         next_states = np.array(next_states)
 
-        # Convert numpy arrays to tensors
         states = torch.FloatTensor(states).to(self.device)
         actions = torch.LongTensor(
             [self.action_space.index(action) for action in actions]
@@ -153,20 +148,32 @@ class DQNFEPAgent(BaseAgent):
         self.soft_update_target_network()
         self.decay_exploration()
 
+    def interpret_action(self, action: str) -> str:
+        """
+        Interpret the agent's action in a human-readable format.
+        """
+        action_interpretations = {
+            "ask_question": "The agent decides to ask a question to gather more information.",
+            "provide_information": "The agent provides relevant information to the user.",
+            "clarify": "The agent attempts to clarify a point or resolve any confusion.",
+            "suggest_action": "The agent suggests a specific action or solution to the user.",
+            "express_empathy": "The agent expresses empathy or understanding towards the user's situation.",
+            "end_conversation": "The agent determines it's appropriate to end the conversation.",
+        }
+        return action_interpretations.get(action, f"Unknown action: {action}")
+
     def update_belief(self, observation: np.ndarray) -> None:
-        # Validate that observation is numeric
         if not np.issubdtype(observation.dtype, np.number):
             raise ValueError("Observation must be a numeric array.")
-        
+
         self._update_belief_recursive(self.root_belief, observation)
         self._regularize_beliefs()
 
     def _update_belief_recursive(self, node: BeliefNode, observation: np.ndarray):
-        # Ensure observation is a numpy array of floats
         observation = np.asarray(observation)
         if observation.dtype != node.mean.dtype:
             observation = observation.astype(node.mean.dtype)
-        
+
         prediction_error = observation - node.mean
         node.precision += (
             np.outer(prediction_error, prediction_error) * self.learning_rate
@@ -190,13 +197,7 @@ class DQNFEPAgent(BaseAgent):
         self.free_energy = self._calculate_free_energy_recursive(self.root_belief)
 
     def _build_network(self):
-        return nn.Sequential(
-            nn.Linear(self.state_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, self.action_dim),
-        )
+        return DQN(self.state_dim, self.action_dim).to(self.device)
 
     def _calculate_free_energy_recursive(self, node: BeliefNode) -> float:
         kl_divergence = self._kl_divergence(node)
@@ -272,48 +273,20 @@ class DQNFEPAgent(BaseAgent):
             node.children[action] = child
             self._build_belief_hierarchy(child, level + 1)
 
-    def interpret_action(self, action: str) -> str:
-        """
-        Interpret the agent's action in a human-readable format.
-        """
-        action_interpretations = {
-            "ask_question": "The agent decides to ask a question to gather more information.",
-            "provide_information": "The agent provides relevant information to the user.",
-            "clarify": "The agent attempts to clarify a point or resolve any confusion.",
-            "suggest_action": "The agent suggests a specific action or solution to the user.",
-            "express_empathy": "The agent expresses empathy or understanding towards the user's situation.",
-            "end_conversation": "The agent determines it's appropriate to end the conversation.",
-        }
-        return action_interpretations.get(action, f"Unknown action: {action}")
-
     def process_user_input(self, user_input: str) -> np.ndarray:
-        """
-        Simple natural language processing to extract features from user input.
-        """
-        # This is a very basic implementation and can be expanded with more sophisticated NLP techniques
-        features = np.zeros(5)  # Assuming 5 features for simplicity
+        features = np.zeros(5)
 
         words = user_input.split()
-        features[0] = len(words)  # Number of words
-        features[1] = user_input.count("?") / len(words)  # Question mark ratio
-        features[2] = user_input.count("!") / len(words)  # Exclamation mark ratio
-        features[3] = len(user_input) / 100  # Normalized length of input
+        features[0] = len(words)
+        features[1] = user_input.count("?") / len(words)
+        features[2] = user_input.count("!") / len(words)
+        features[3] = len(user_input) / 100
         features[4] = sum(
             1
             for word in words
             if word.lower() in ["please", "thank", "thanks", "appreciate"]
-        ) / len(
-            words
-        )  # Politeness ratio
+        ) / len(words)
 
-        # Ensure features are of type float
         features = features.astype(float)
-
-        # Debug print statements
-        print(f"Debug: Input string: '{user_input}'")
-        print(f"Debug: Word count: {len(words)}")
-        print(f"Debug: Question mark count: {user_input.count('?')}")
-        print(f"Debug: Exclamation mark count: {user_input.count('!')}")
-        print(f"Debug: Features: {features}")
 
         return features
