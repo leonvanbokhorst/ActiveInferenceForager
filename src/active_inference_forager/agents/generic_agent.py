@@ -304,7 +304,7 @@ class GenericAgent(BaseAgent):
 
         # Keyword detection
         keywords = ["help", "explain", "understand", "confused", "clarify"]
-        features[6] = sum(1 for word in words if word.lower() in keywords) / max(len(words), 1)
+        features[6] = sum(bool(word.lower() in keywords)
 
         # Complexity indicators
         features[7] = len(set(words)) / max(len(words), 1)  # Lexical diversity
