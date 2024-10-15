@@ -293,7 +293,7 @@ class GenericAgent(BaseAgent):
         # Basic text statistics
         words = user_input.split()
         features[0] = len(words)  # Word count
-        features[1] = len(user_input) / max(len(words), 1)  # Average word length
+        features[1] = sum(len(word) for word in words) / max(len(words), 1)  # Average word length
         features[2] = user_input.count("?") / max(len(words), 1)  # Question mark frequency
         features[3] = user_input.count("!") / max(len(words), 1)  # Exclamation mark frequency
 
@@ -304,7 +304,7 @@ class GenericAgent(BaseAgent):
 
         # Keyword detection
         keywords = ["help", "explain", "understand", "confused", "clarify"]
-        features[6] = sum(bool(word.lower() in keywords)
+        features[6] = sum(word.lower() in keywords for word in words) / max(len(words), 1)
 
         # Complexity indicators
         features[7] = len(set(words)) / max(len(words), 1)  # Lexical diversity
@@ -312,7 +312,7 @@ class GenericAgent(BaseAgent):
 
         # Politeness indicator
         polite_words = ["please", "thank", "thanks", "appreciate", "kindly"]
-        features[9] = sum(bool(word.lower() in polite_words)
+        features[9] = sum(word.lower() in polite_words for word in words) / max(len(words), 1)
 
         # spaCy processing
         doc = self.nlp(user_input)
@@ -341,4 +341,4 @@ class GenericAgent(BaseAgent):
         features[15] = len([token for token in doc if token.is_stop]) / max(len(words), 1)  # Stop word density
         features[16] = len([token for token in doc if token.is_punct]) / max(len(words), 1)  # Punctuation density
 
-        return features.astype(float)
+        return features

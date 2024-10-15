@@ -7,16 +7,6 @@ from active_inference_forager.agents.generic_agent import GenericAgent, Experien
 @pytest.fixture
 def agent():
     action_space = [
-        "ask_question",
-        "provide_information",
-        "clarify",
-        "suggest_action",
-        "express_empathy",
-        "end_conversation",
-    ]
-@pytest.fixture
-def agent():
-    action_space = [
         "express_empathy",
         "end_conversation",
     ]
@@ -112,10 +102,10 @@ def test_process_user_input(agent):
     assert isinstance(features, np.ndarray)
     assert features.shape == (17,)
     assert features[0] == 8  # Word count
-    assert features[1] > 0  # Average word length
-    assert features[2] == 1 / 8  # Question mark frequency
-    assert features[3] == 1 / 8  # Exclamation mark frequency
-    assert -1 <= features[4] <= 1  # Sentiment polarity
+    assert features[2] == 0.125  # Question mark frequency
+    assert features[3] == 0.125  # Exclamation mark frequency
+    assert 0 < features[1] < 5  # Average word length
+    assert -1.0 <= features[4] <= 1.0  # Sentiment polarity
     assert 0 <= features[5] <= 1  # Subjectivity
     assert 0 <= features[6] <= 1  # Keyword detection
     assert 0 <= features[7] <= 1  # Lexical diversity
@@ -127,16 +117,7 @@ def test_process_user_input(agent):
     assert 0 <= features[13] <= 1  # Main clause density
     assert features[14] > 0  # Average parse tree depth
     assert 0 <= features[15] <= 1  # Stop word density
-def test_process_user_input(agent):
-    user_input = "Hello, how are you? I'm feeling great today!"
-    features = agent.process_user_input(user_input)
-    assert isinstance(features, np.ndarray)
-    assert features.shape == (17,)
-    assert features[0] == 8  # Word count
-    assert features[2] == 0.125  # Question mark frequency
-    assert features[3] == 0.125  # Exclamation mark frequency
-    assert 0 < features[1] < 5  # Average word length
-    assert -0.9 < features[4] < 0.9  # Sentiment polarity
+    assert 0 <= features[16] <= 1  # Punctuation density
 
 
 if __name__ == "__main__":
