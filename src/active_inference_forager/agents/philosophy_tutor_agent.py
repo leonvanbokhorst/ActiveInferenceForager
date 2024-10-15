@@ -2,13 +2,15 @@ import numpy as np
 from typing import Dict, List
 from pydantic import Field
 from active_inference_forager.agents.generic_agent import GenericAgent
+import spacy
 
 
 class PhilosophyTutorAgent(GenericAgent):
     knowledge_base: Dict[str, Dict] = Field(default_factory=dict)
+    nlp: spacy.language.Language = Field(default_factory=lambda: spacy.load("en_core_web_sm"))
 
-    def __init__(self, state_dim: int, action_dim: int, **kwargs):
-        super().__init__(state_dim=state_dim, action_dim=action_dim, **kwargs)
+    def __init__(self, action_dim: int, **kwargs):
+        super().__init__(action_dim=action_dim, **kwargs)
         self.action_space = [
             "explain_concept",
             "ask_question",
@@ -67,25 +69,50 @@ class PhilosophyTutorAgent(GenericAgent):
             return "I'm not sure how to respond to that."
 
     def explain_philosophical_concept(self, state: np.ndarray) -> str:
-        # TODO: Implement logic to choose a concept based on the state
-        concept = "epistemology"  # Placeholder
+        # Use the state vector to choose a concept
+        concepts = list(self.knowledge_base['concepts'].keys())
+        concept_index = int(state[0] * len(concepts)) % len(concepts)
+        concept = concepts[concept_index]
         return f"Let me explain {concept}: {self.knowledge_base['concepts'][concept]}"
 
     def ask_socratic_question(self, state: np.ndarray) -> str:
-        # TODO: Implement logic to generate a relevant question based on the state
-        return "What do you think it means to truly know something?"
+        # Use the state vector to generate a relevant question
+        questions = [
+            "What do you think it means to truly know something?",
+            "How can we determine what is morally right or wrong?",
+            "What is the nature of reality, in your opinion?",
+            "How do you think we can achieve a just society?",
+        ]
+        question_index = int(state[1] * len(questions)) % len(questions)
+        return questions[question_index]
 
     def introduce_related_idea(self, state: np.ndarray) -> str:
-        # TODO: Implement logic to choose a related idea based on the state
-        return "Have you considered how this relates to the concept of free will?"
+        # Use the state vector to choose a related idea
+        ideas = [
+            "free will",
+            "consciousness",
+            "personal identity",
+            "the meaning of life",
+        ]
+        idea_index = int(state[2] * len(ideas)) % len(ideas)
+        return f"Have you considered how this relates to the concept of {ideas[idea_index]}?"
 
     def provide_example(self, state: np.ndarray) -> str:
-        # TODO: Implement logic to choose a relevant example based on the state
-        return "For instance, consider how we use logic in everyday decision-making..."
+        # Use the state vector to choose a relevant example
+        examples = [
+            "Consider how we use logic in everyday decision-making...",
+            "Think about how ethical considerations shape our laws and social norms...",
+            "Reflect on how our understanding of reality influences our actions...",
+            "Examine how our beliefs about knowledge affect our learning processes...",
+        ]
+        example_index = int(state[3] * len(examples)) % len(examples)
+        return examples[example_index]
 
     def suggest_thought_experiment(self, state: np.ndarray) -> str:
-        # TODO: Implement logic to choose a thought experiment based on the state
-        experiment = "The Cave"  # Placeholder
+        # Use the state vector to choose a thought experiment
+        experiments = list(self.knowledge_base['thought_experiments'].keys())
+        experiment_index = int(state[4] * len(experiments)) % len(experiments)
+        experiment = experiments[experiment_index]
         return f"Let's explore {experiment}: {self.knowledge_base['thought_experiments'][experiment]}"
 
     def acknowledge_limitation(self, state: np.ndarray) -> str:
@@ -95,9 +122,8 @@ class PhilosophyTutorAgent(GenericAgent):
         # We're now working directly with the state vector
         super().update_belief(state)
 
-    def process_user_input(self, state: np.ndarray) -> np.ndarray:
-        # This method now processes the state vector instead of a string
-        # We'll return the state as is, since it's already a numpy array
-        return state
+    def process_user_input(self, user_input: str) -> np.ndarray:
+        # Use the GenericAgent's process_user_input method
+        return super().process_user_input(user_input)
 
     # ... rest of the class implementation remains the same ...

@@ -6,6 +6,9 @@ from typing import List, Tuple
 from pydantic import Field, ConfigDict
 from collections import deque
 import random
+import re
+from textblob import TextBlob
+import spacy
 
 from active_inference_forager.agents.base_agent import BaseAgent
 from active_inference_forager.agents.belief_node import BeliefNode
@@ -80,9 +83,13 @@ class GenericAgent(BaseAgent):
     episode_lengths: List[int] = Field(default_factory=list)
     total_steps: int = Field(default=0)
 
+    # NLP model
+    nlp: spacy.language.Language = Field(default_factory=lambda: spacy.load("en_core_web_sm"))
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self, state_dim: int, action_dim: int, **kwargs):
+    def __init__(self, action_dim: int, **kwargs):
+        state_dim = 17  # Updated to match the environment's state dimension
         super().__init__(state_dim=state_dim, action_dim=action_dim, **kwargs)
 
         self.root_belief = BeliefNode(
@@ -94,12 +101,19 @@ class GenericAgent(BaseAgent):
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
 
-        self.initialize_belief_and_action_space()
+        self.action_space = [
+            "ask_question",
+            "provide_information",
+            "clarify",
+            "suggest_action",
+            "express_empathy",
+            "end_conversation",
+        ]
         self.exploration_rate = self.epsilon_start
 
     def take_action(self, state: np.ndarray) -> str:
         if np.random.rand() < self.exploration_rate:
-            return np.random.choice(self.action_space)
+            return random.choice(self.action_space)
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         q_values = self.q_network(state_tensor)
         return self.action_space[q_values.argmax().item()]
@@ -274,19 +288,57 @@ class GenericAgent(BaseAgent):
             self._build_belief_hierarchy(child, level + 1)
 
     def process_user_input(self, user_input: str) -> np.ndarray:
-        features = np.zeros(5)
+        features = np.zeros(17)  # Updated to match the environment's state dimension
 
+        # Basic text statistics
         words = user_input.split()
-        features[0] = len(words)
-        features[1] = user_input.count("?") / len(words)
-        features[2] = user_input.count("!") / len(words)
-        features[3] = len(user_input) / 100
-        features[4] = sum(
-            1
-            for word in words
-            if word.lower() in ["please", "thank", "thanks", "appreciate"]
-        ) / len(words)
+        features[0] = len(words)  # Word count
+        features[1] = sum(len(word) for word in words) / max(len(words), 1)  # Average word length
+        features[2] = user_input.count("?") / max(len(words), 1)  # Question mark frequency
+        features[3] = user_input.count("!") / max(len(words), 1)  # Exclamation mark frequency
 
-        features = features.astype(float)
+        # Sentiment analysis
+        blob = TextBlob(user_input)
+        features[4] = blob.sentiment.polarity  # Sentiment polarity (-1 to 1)
+        features[5] = blob.sentiment.subjectivity  # Subjectivity (0 to 1)
+
+        # Keyword detection
+        keywords = ["help", "explain", "understand", "confused", "clarify"]
+        features[6] = sum(word.lower() in keywords for word in words) / max(len(words), 1)
+
+        # Complexity indicators
+        features[7] = len(set(words)) / max(len(words), 1)  # Lexical diversity
+        features[8] = sum(len(word) > 6 for word in words) / max(len(words), 1)  # Proportion of long words
+
+        # Politeness indicator
+        polite_words = ["please", "thank", "thanks", "appreciate", "kindly"]
+        features[9] = sum(word.lower() in polite_words for word in words) / max(len(words), 1)
+
+        # spaCy processing
+        doc = self.nlp(user_input)
+
+        # Named Entity Recognition
+        features[10] = len(doc.ents) / max(len(words), 1)  # Named entity density
+
+        # Part-of-speech tagging
+        pos_counts = {pos: 0 for pos in ['NOUN', 'VERB', 'ADJ', 'ADV']}
+        for token in doc:
+            if token.pos_ in pos_counts:
+                pos_counts[token.pos_] += 1
+        features[11] = pos_counts['NOUN'] / max(len(words), 1)  # Noun density
+        features[12] = pos_counts['VERB'] / max(len(words), 1)  # Verb density
+
+        # Dependency parsing
+        features[13] = len([token for token in doc if token.dep_ == 'ROOT']) / max(len(words), 1)  # Main clause density
+
+        # Sentence complexity (using dependency parse tree depth)
+        def tree_depth(token):
+            return 1 + max((tree_depth(child) for child in token.children), default=0)
+
+        features[14] = sum(tree_depth(sent.root) for sent in doc.sents) / max(len(list(doc.sents)), 1)  # Average parse tree depth
+
+        # Additional features to match the environment's state dimension
+        features[15] = len([token for token in doc if token.is_stop]) / max(len(words), 1)  # Stop word density
+        features[16] = len([token for token in doc if token.is_punct]) / max(len(words), 1)  # Punctuation density
 
         return features

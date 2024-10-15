@@ -4,7 +4,7 @@ fonttools==4.54.1
 iniconfig==2.0.0
 kiwisolver==1.4.7
 matplotlib==3.9.2
-numpy==2.1.2
+numpy==2.0.2
 packaging==24.1
 pillow==10.4.0
 pluggy==1.5.0
@@ -17,3 +17,6 @@ six==1.16.0
 pydantic
 torch
 torchvision
+textblob
+spacy==3.8.2
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
