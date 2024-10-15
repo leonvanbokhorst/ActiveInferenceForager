@@ -8,11 +8,7 @@ from active_inference_forager.environments.philosophy_dialogue_environment impor
 )
 from active_inference_forager.agents.philosophy_tutor_agent import PhilosophyTutorAgent
 
-
-import numpy as np
-import matplotlib.pyplot as plt
 from collections import defaultdict
-
 
 def train_agent(agent, env, n_episodes, log_interval=100):
     rewards_history = []
@@ -26,7 +22,7 @@ def train_agent(agent, env, n_episodes, log_interval=100):
 
         while True:
             action = agent.take_action(state)
-            next_state, reward, done = env.step(action)
+            next_state, reward, done = env.step(action, "")  # Empty string as placeholder for user input during training
 
             agent.learn(state, action, next_state, reward, done)
 
@@ -53,11 +49,7 @@ def train_agent(agent, env, n_episodes, log_interval=100):
                 print(f"  {action}: {count/total_actions:.2%}")
             print("\n")
 
-            # Optionally, plot metrics here
-            # plot_metrics(rewards_history, episode_lengths, action_counts)
-
     return rewards_history, episode_lengths, action_counts
-
 
 def plot_metrics(rewards, lengths, action_counts):
     plt.figure(figsize=(15, 5))
@@ -85,7 +77,6 @@ def plot_metrics(rewards, lengths, action_counts):
     plt.tight_layout()
     plt.show()
 
-
 def test_agent(
     agent: PhilosophyTutorAgent,
     env: PhilosophyDialogueEnvironment,
@@ -104,7 +95,7 @@ def test_agent(
 
         while not done:
             action = agent.take_action(state)
-            next_state, reward, done = env.step(action)
+            next_state, reward, done = env.step(action, "")  # Empty string as placeholder for user input during testing
             state = next_state
             episode_reward += reward
             episode_steps += 1
@@ -116,9 +107,7 @@ def test_agent(
             f"Test Episode {episode}: Reward = {episode_reward:.2f}, Steps = {episode_steps}"
         )
 
-    agent.exploration_rate = (
-        original_exploration_rate  # Restore the original exploration rate
-    )
+    agent.exploration_rate = original_exploration_rate  # Restore the original exploration rate
 
     avg_reward = np.mean(test_rewards)
     avg_steps = np.mean(test_steps)
@@ -128,7 +117,6 @@ def test_agent(
         f"Test Results - Avg Reward: {avg_reward:.2f}, Avg Steps: {avg_steps:.2f}, Consistency: {consistency:.2f}"
     )
     return avg_reward, avg_steps
-
 
 def simulate_conversation(
     agent: PhilosophyTutorAgent, env: PhilosophyDialogueEnvironment, max_turns: int = 10
@@ -147,13 +135,10 @@ def simulate_conversation(
 
         user_input = input("User: ")
 
-        next_state, reward, done = env.step(action)
+        next_state, reward, done = env.step(action, user_input)
 
         # Process user input into numerical features
-        # create a variable with a np.array with three random values between 0.0 and 1.0
-        placeholder_user_input = np.random.rand(10)
-
-        processed_input = agent.process_user_input(placeholder_user_input)  # user_input
+        processed_input = agent.process_user_input(user_input)
         agent.update_belief(processed_input)
 
         state = next_state
@@ -167,7 +152,6 @@ def simulate_conversation(
     print("Conversation ended.")
     print(f"Final user understanding: {env.user_understanding}")
     print(f"Final user interests: {env.user_interests}")
-
 
 def save_agent(agent: PhilosophyTutorAgent, path: str):
     torch.save(
@@ -183,7 +167,6 @@ def save_agent(agent: PhilosophyTutorAgent, path: str):
     )
     print(f"Agent saved to {path}")
 
-
 def load_agent(agent: PhilosophyTutorAgent, path: str):
     checkpoint = torch.load(path)
     agent.q_network.load_state_dict(checkpoint["q_network_state_dict"])
@@ -194,18 +177,14 @@ def load_agent(agent: PhilosophyTutorAgent, path: str):
     agent.knowledge_base = checkpoint["knowledge_base"]
     print(f"Agent loaded from {path}")
 
-
 def main():
     env = PhilosophyDialogueEnvironment()
     initial_state = env.reset()
-    state_dim = initial_state.shape[0]
     action_dim = len(env.action_space)
 
-    print(f"State dimension: {state_dim}")
     print(f"Action dimension: {action_dim}")
 
     agent = PhilosophyTutorAgent(
-        state_dim=state_dim,
         action_dim=action_dim,
         learning_rate=1e-3,
         discount_factor=0.99,
@@ -235,7 +214,6 @@ def main():
 
     # Simulate a conversation with the trained agent
     simulate_conversation(agent, env)
-
 
 if __name__ == "__main__":
     main()

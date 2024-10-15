@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import torch
-from active_inference_forager.agents.generic_agent import GenericAgent
+from active_inference_forager.agents.generic_agent import GenericAgent, ExperienceReplayBuffer, DQN
 
 
 @pytest.fixture
@@ -14,41 +14,36 @@ def agent():
         "express_empathy",
         "end_conversation",
     ]
-    return GenericAgent(
-        state_dim=5, action_dim=len(action_space), action_space=action_space
-    )
+    return GenericAgent(action_dim=len(action_space))
 
 
 def test_agent_initialization(agent):
     assert isinstance(agent, GenericAgent)
-    assert agent.state_dim == 5
-    assert np.array_equal(
-        agent.action_space,
-        [
-            "ask_question",
-            "provide_information",
-            "clarify",
-            "suggest_action",
-            "express_empathy",
-            "end_conversation",
-        ],
-    )
-    assert isinstance(agent.q_network, torch.nn.Module)
-    assert isinstance(agent.target_network, torch.nn.Module)
+    assert agent.state_dim == 17
+    assert agent.action_space == [
+        "ask_question",
+        "provide_information",
+        "clarify",
+        "suggest_action",
+        "express_empathy",
+        "end_conversation",
+    ]
+    assert isinstance(agent.q_network, DQN)
+    assert isinstance(agent.target_network, DQN)
     assert isinstance(agent.optimizer, torch.optim.Adam)
     assert agent.exploration_rate == agent.epsilon_start
 
 
 def test_take_action(agent):
-    state = np.random.rand(5)
+    state = np.random.rand(17)
     action = agent.take_action(state)
     assert action in agent.action_space
 
 
 def test_learn(agent):
-    state = np.random.rand(5)
+    state = np.random.rand(17)
     action = "ask_question"
-    next_state = np.random.rand(5)
+    next_state = np.random.rand(17)
     reward = 1.0
     done = False
 
@@ -60,7 +55,7 @@ def test_learn(agent):
 
 
 def test_update_belief(agent):
-    observation = np.random.rand(5)
+    observation = np.random.rand(17)
     initial_mean = agent.root_belief.mean.copy()
     initial_precision = agent.root_belief.precision.copy()
 
@@ -107,12 +102,24 @@ def test_process_user_input(agent):
     user_input = "Hello, how are you? I'm feeling great today!"
     features = agent.process_user_input(user_input)
     assert isinstance(features, np.ndarray)
-    assert features.shape == (5,)
-    assert features[0] == 8  # Number of words
-    assert features[1] == 1 / 8  # Question mark ratio
-    assert features[2] == 1 / 8  # Exclamation mark ratio
-    assert 0 < features[3] < 1  # Normalized length
-    assert features[4] == 0  # Politeness ratio
+    assert features.shape == (17,)
+    assert features[0] == 8  # Word count
+    assert features[1] > 0  # Average word length
+    assert features[2] == 1 / 8  # Question mark frequency
+    assert features[3] == 1 / 8  # Exclamation mark frequency
+    assert -1 <= features[4] <= 1  # Sentiment polarity
+    assert 0 <= features[5] <= 1  # Subjectivity
+    assert 0 <= features[6] <= 1  # Keyword detection
+    assert 0 <= features[7] <= 1  # Lexical diversity
+    assert 0 <= features[8] <= 1  # Proportion of long words
+    assert 0 <= features[9] <= 1  # Politeness indicator
+    assert 0 <= features[10] <= 1  # Named entity density
+    assert 0 <= features[11] <= 1  # Noun density
+    assert 0 <= features[12] <= 1  # Verb density
+    assert 0 <= features[13] <= 1  # Main clause density
+    assert features[14] > 0  # Average parse tree depth
+    assert 0 <= features[15] <= 1  # Stop word density
+    assert 0 <= features[16] <= 1  # Punctuation density
 
 
 if __name__ == "__main__":
