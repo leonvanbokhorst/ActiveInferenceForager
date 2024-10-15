@@ -312,7 +312,7 @@ class GenericAgent(BaseAgent):
 
         # Politeness indicator
         polite_words = ["please", "thank", "thanks", "appreciate", "kindly"]
-        features[9] = sum(1 for word in words if word.lower() in polite_words) / max(len(words), 1)
+        features[9] = sum(bool(word.lower() in polite_words)
 
         # spaCy processing
         doc = self.nlp(user_input)
