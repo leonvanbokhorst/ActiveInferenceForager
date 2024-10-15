@@ -111,9 +111,7 @@ class PhilosophyDialogueEnvironment(ChatEnvironment):
             if keyword in user_input.lower():
                 self._update_user_interests(increase=0.05, topic=keyword)
 
-        # Update user understanding based on the complexity of the response
-        words = user_input.split()
-        if words:
+        if words := user_input.split():
             avg_word_length = sum(len(word) for word in words) / len(words)
             if avg_word_length > 6:  # If the average word length is high, assume increased understanding
                 self._update_user_understanding(increase=0.05)
