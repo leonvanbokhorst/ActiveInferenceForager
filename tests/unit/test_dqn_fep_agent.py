@@ -14,7 +14,15 @@ def agent():
         "express_empathy",
         "end_conversation",
     ]
-    return GenericAgent(action_dim=len(action_space))
+@pytest.fixture
+def agent():
+    action_space = [
+        "express_empathy",
+        "end_conversation",
+    ]
+    agent = GenericAgent(action_dim=len(action_space))
+    assert agent.state_dim == 17
+    return agent
 
 
 def test_agent_initialization(agent):
