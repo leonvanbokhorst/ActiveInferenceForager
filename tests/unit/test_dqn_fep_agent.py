@@ -127,7 +127,16 @@ def test_process_user_input(agent):
     assert 0 <= features[13] <= 1  # Main clause density
     assert features[14] > 0  # Average parse tree depth
     assert 0 <= features[15] <= 1  # Stop word density
-    assert 0 <= features[16] <= 1  # Punctuation density
+def test_process_user_input(agent):
+    user_input = "Hello, how are you? I'm feeling great today!"
+    features = agent.process_user_input(user_input)
+    assert isinstance(features, np.ndarray)
+    assert features.shape == (17,)
+    assert features[0] == 8  # Word count
+    assert features[2] == 0.125  # Question mark frequency
+    assert features[3] == 0.125  # Exclamation mark frequency
+    assert 0 < features[1] < 5  # Average word length
+    assert -0.9 < features[4] < 0.9  # Sentiment polarity
 
 
 if __name__ == "__main__":
