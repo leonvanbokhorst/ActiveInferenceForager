@@ -333,7 +333,7 @@ class GenericAgent(BaseAgent):
 
         # Sentence complexity (using dependency parse tree depth)
         def tree_depth(token):
-            return 1 + max([tree_depth(child) for child in token.children], default=0)
+            return 1 + max((tree_depth(child) for child in token.children), default=0)
 
         features[14] = sum(tree_depth(sent.root) for sent in doc.sents) / max(len(list(doc.sents)), 1)  # Average parse tree depth
 
