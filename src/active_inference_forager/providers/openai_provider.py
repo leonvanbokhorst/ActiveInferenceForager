@@ -5,7 +5,7 @@ from active_inference_forager.providers.llm_provider import LLMProvider
 
 
 class OpenAIProvider(LLMProvider):
-    def __init__(self, api_key=None, model="gpt-4"):
+    def __init__(self, api_key=None, model="gpt-4o-mini"):
         if not api_key:
             # get from env
             api_key = os.getenv("OPENAI_API_KEY")
