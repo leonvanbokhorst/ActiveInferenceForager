@@ -11,11 +11,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # Create handlers
-file_handler = RotatingFileHandler('logs/rapport_builder.log', maxBytes=10000, backupCount=3)
+file_handler = RotatingFileHandler(
+    "logs/rapport_builder.log", maxBytes=10000, backupCount=3
+)
 console_handler = logging.StreamHandler()
 
 # Create formatters and add it to handlers
-log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+log_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(log_format)
 console_handler.setFormatter(log_format)
 
@@ -56,7 +58,9 @@ class RapportBuilder(InteractionManager):
         dependencies = [(token.text, token.dep_, token.head.text) for token in doc]
         emotion = self.detect_emotion(user_input)
         sentiment = self.analyze_sentiment(user_input)
-        logger.info(f"Extracted features: emotion={emotion}, sentiment={sentiment}")
+        logger.info(
+            f"Extracted features: emotion={emotion}, sentiment={sentiment}, entities={entities}, dependencies={dependencies}"
+        )
         return {
             "entities": entities,
             "dependencies": dependencies,
