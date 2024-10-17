@@ -7,10 +7,10 @@ class SimpleInferenceEngine:
     def infer(self, observations):
         self.memory.append(observations)
         self.update_beliefs(observations)
-        return self.choose_action(self.belief_state)
+        return self.belief_state
 
     def update_beliefs(self, observations):
-        if any(obs.get("intent") == "reset_router" for obs in self.memory):
+        if observations.get("emotion") == "frustrated":
             self.belief_state["reset_router"] += 0.1
             self.belief_state["unknown"] = 1 - self.belief_state["reset_router"]
         else:
