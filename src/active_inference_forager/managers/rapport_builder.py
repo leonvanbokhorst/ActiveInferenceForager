@@ -27,18 +27,40 @@ class RapportBuilder(InteractionManager):
     def analyze_sentiment(self, text):
         blob = TextBlob(text)
         polarity = blob.sentiment.polarity
-        if polarity < -0.3:
-            return "frustrated"
-        elif polarity > 0.3:
-            return "happy"
+        subjectivity = blob.sentiment.subjectivity
+
+        if polarity < -0.6:
+            return "very_negative"
+        elif -0.6 <= polarity < -0.2:
+            return "negative"
+        elif -0.2 <= polarity < 0.2:
+            if subjectivity < 0.4:
+                return "neutral"
+            else:
+                return "mixed"
+        elif 0.2 <= polarity < 0.6:
+            return "positive"
         else:
-            return "neutral"
+            return "very_positive"
 
     def generate_response(self, action, user_input):
+        emotion = self.analyze_sentiment(user_input)
+        print(f"Detected emotion: {emotion}")
         if action == "empathetic_response":
-            prompt = f"You notice the user is frustrated. Respond empathetically to help them feel understood."
+            if emotion == "very_negative":
+                prompt = f"The user said '{user_input}' and seems very upset. Respond with strong empathy and offer support."
+            elif emotion == "negative":
+                prompt = f"The user said '{user_input}' and  appears to be feeling down. Respond with empathy and encouragement."
+            elif emotion == "neutral":
+                prompt = f"The user said '{user_input}' and  seems neutral. Respond in a friendly and supportive manner."
+            elif emotion == "mixed":
+                prompt = f"The user said '{user_input}' and their emotions seem mixed. Acknowledge their complex feelings and offer a balanced response."
+            elif emotion == "positive":
+                prompt = f"The user said '{user_input}' and seems to be in a good mood. Respond positively and build on their enthusiasm."
+            elif emotion == "very_positive":
+                prompt = f"The user said '{user_input}' and is very happy. Share in their excitement and reinforce their positive feelings."
         else:
-            prompt = f"Assist the user based on their input: '{user_input}'"
+            prompt = f"Assist the user based on their input: '{user_input}'. Their emotional state seems to be {emotion}."
 
         response = self.llm_provider.generate_response(prompt)
         return response
