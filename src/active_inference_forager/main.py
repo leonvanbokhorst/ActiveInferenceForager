@@ -9,7 +9,6 @@ from active_inference_forager.managers.goal_seeker import GoalSeeker
 
 def main():
     try:
-        
         # When instantiating the agent
         llm_provider = OpenAIProvider()
 
@@ -30,6 +29,7 @@ def main():
         print("export OPENAI_API_KEY='your-api-key-here'")
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
+
 
 if __name__ == "__main__":
     main()
