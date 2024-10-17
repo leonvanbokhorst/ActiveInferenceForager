@@ -1,66 +1,127 @@
+import spacy
+import logging
+from logging.handlers import RotatingFileHandler
 from textblob import TextBlob
+from transformers import pipeline
 
 from active_inference_forager.managers.interaction_manager import InteractionManager
+
+# Set up logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Create handlers
+file_handler = RotatingFileHandler('logs/rapport_builder.log', maxBytes=10000, backupCount=3)
+console_handler = logging.StreamHandler()
+
+# Create formatters and add it to handlers
+log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(log_format)
+console_handler.setFormatter(log_format)
+
+# Add handlers to the logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 
 class RapportBuilder(InteractionManager):
     def __init__(self, inference_engine, llm_provider):
         super().__init__(inference_engine)
         self.llm_provider = llm_provider
+        self.nlp = spacy.load("en_core_web_sm")
+        self.emotion_classifier = pipeline(
+            "text-classification",
+            model="bhadresh-savani/distilbert-base-uncased-emotion",
+            return_all_scores=True,
+        )
+        logger.info("RapportBuilder initialized")
 
     def process_input(self, user_input):
+        logger.info(f"Processing user input: {user_input}")
         observations = self.extract_features(user_input)
         beliefs = self.inference_engine.infer(observations)
         action = self.inference_engine.choose_action(beliefs)
-        response = self.generate_response(action, user_input)
+        logger.info(f"Chosen action: {action}")
+        response = self.generate_response(action, user_input, observations)
         return response
 
     def handle_proactive_behavior(self):
-        # Additional proactive behaviors can be implemented here
+        logger.info("Handling proactive behavior")
         pass
 
     def extract_features(self, user_input):
-        # Use NLP tools to extract features
-        emotion = self.analyze_sentiment(user_input)
-        return {"emotion": emotion}
+        logger.info("Extracting features from user input")
+        doc = self.nlp(user_input)
+        entities = [(ent.text, ent.label_) for ent in doc.ents]
+        dependencies = [(token.text, token.dep_, token.head.text) for token in doc]
+        emotion = self.detect_emotion(user_input)
+        sentiment = self.analyze_sentiment(user_input)
+        logger.info(f"Extracted features: emotion={emotion}, sentiment={sentiment}")
+        return {
+            "entities": entities,
+            "dependencies": dependencies,
+            "emotion": emotion,
+            "sentiment": sentiment,
+        }
+
+    def detect_emotion(self, text):
+        logger.info("Detecting emotion")
+        results = self.emotion_classifier(text)[0]
+        emotion = max(results, key=lambda x: x["score"])["label"]
+        logger.info(f"Detected emotion: {emotion}")
+        return emotion
 
     def analyze_sentiment(self, text):
+        logger.info("Analyzing sentiment")
         blob = TextBlob(text)
         polarity = blob.sentiment.polarity
         subjectivity = blob.sentiment.subjectivity
 
         if polarity < -0.6:
-            return "very_negative"
+            sentiment = "very_negative"
         elif -0.6 <= polarity < -0.2:
-            return "negative"
+            sentiment = "negative"
         elif -0.2 <= polarity < 0.2:
-            if subjectivity < 0.4:
-                return "neutral"
-            else:
-                return "mixed"
+            sentiment = "neutral" if subjectivity < 0.4 else "mixed"
         elif 0.2 <= polarity < 0.6:
-            return "positive"
+            sentiment = "positive"
         else:
-            return "very_positive"
+            sentiment = "very_positive"
 
-    def generate_response(self, action, user_input):
-        emotion = self.analyze_sentiment(user_input)
-        print(f"Detected emotion: {emotion}")
-        if action == "empathetic_response":
-            if emotion == "very_negative":
-                prompt = f"The user said '{user_input}' and seems very upset. Respond with strong empathy and offer support."
-            elif emotion == "negative":
-                prompt = f"The user said '{user_input}' and  appears to be feeling down. Respond with empathy and encouragement."
-            elif emotion == "neutral":
-                prompt = f"The user said '{user_input}' and  seems neutral. Respond in a friendly and supportive manner."
-            elif emotion == "mixed":
-                prompt = f"The user said '{user_input}' and their emotions seem mixed. Acknowledge their complex feelings and offer a balanced response."
-            elif emotion == "positive":
-                prompt = f"The user said '{user_input}' and seems to be in a good mood. Respond positively and build on their enthusiasm."
-            elif emotion == "very_positive":
-                prompt = f"The user said '{user_input}' and is very happy. Share in their excitement and reinforce their positive feelings."
-        else:
-            prompt = f"Assist the user based on their input: '{user_input}'. Their emotional state seems to be {emotion}."
+        logger.info(f"Analyzed sentiment: {sentiment}")
+        return sentiment
 
-        response = self.llm_provider.generate_response(prompt)
+    def generate_response(self, action, user_input, observations):
+        logger.info("Generating response")
+        emotion = observations["emotion"]
+        sentiment = observations["sentiment"]
+        entities = observations["entities"]
+
+        system_prompt = """
+        You are an AI assistant designed to build rapport with users. Your responses should be empathetic, 
+        considerate of the user's emotional state, and relevant to the entities they mention. Adapt your 
+        language and tone to match the user's sentiment and emotional state.
+        """
+
+        user_prompt = f"""
+        User input: '{user_input}'
+        Emotional state: {emotion}
+        Sentiment: {sentiment}
+        Entities mentioned: {entities}
+
+        Action to take: {'Provide an empathetic response' if action == 'empathetic_response' else 'Assist the user'}
+
+        Generate a response that:
+        1. Acknowledges the user's emotional state
+        2. Addresses the entities mentioned if relevant
+        3. Provides assistance or empathy based on the specified action
+        """
+
+        logger.info(f"RapportBuilder: Generating response for action '{action}'")
+        logger.debug(f"RapportBuilder: User Prompt: {user_prompt}")
+
+        response = self.llm_provider.generate_response(
+            user_prompt, system_prompt=system_prompt
+        )
+        logger.info("Response generated successfully")
         return response

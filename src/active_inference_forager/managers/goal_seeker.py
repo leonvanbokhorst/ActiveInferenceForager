@@ -21,14 +21,26 @@ class GoalSeeker(InteractionManager):
         return {"intent": intent}
 
     def generate_response(self, action, user_input):
+        system_prompt = """
+        You are an AI assistant specialized in providing technical support and guidance. 
+        Your responses should be clear, concise, and tailored to the user's specific needs.
+        """
+
         if action == "provide_router_reset_instructions":
-            prompt = f"Provide step-by-step instructions to help the user reset their router."
+            user_prompt = "Provide step-by-step instructions to help the user reset their router."
         else:
-            prompt = f"Assist the user based on their input: '{user_input}'"
-        response = self.llm_provider.generate_response(prompt)
+            user_prompt = f"Assist the user based on their input: '{user_input}'"
+
+        response = self.llm_provider.generate_response(user_prompt, system_prompt=system_prompt)
         return response
 
     def handle_proactive_behavior(self):
-        prompt = "Suggest a proactive action or question to engage the user and further the conversation."
-        proactive_response = self.llm_provider.generate_response(prompt)
+        system_prompt = """
+        You are an AI assistant designed to engage users proactively. 
+        Your suggestions should be relevant, helpful, and encourage further interaction.
+        """
+
+        user_prompt = "Suggest a proactive action or question to engage the user and further the conversation."
+
+        proactive_response = self.llm_provider.generate_response(user_prompt, system_prompt=system_prompt)
         return proactive_response
