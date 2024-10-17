@@ -1,4 +1,7 @@
+from textblob import TextBlob
+
 from active_inference_forager.managers.interaction_manager import InteractionManager
+
 
 class RapportBuilder(InteractionManager):
     def __init__(self, inference_engine, llm_provider):
@@ -22,8 +25,6 @@ class RapportBuilder(InteractionManager):
         return {"emotion": emotion}
 
     def analyze_sentiment(self, text):
-        from textblob import TextBlob
-
         blob = TextBlob(text)
         polarity = blob.sentiment.polarity
         if polarity < -0.3:

@@ -6,7 +6,7 @@ from active_inference_forager.managers.rapport_builder import RapportBuilder
 from active_inference_forager.managers.goal_seeker import GoalSeeker
 
 # When instantiating the agent
-llm_provider = OpenAIProvider(api_key="YOUR_API_KEY", model="gpt-4")
+llm_provider = OpenAIProvider()
 
 # Initialize inference engine and interaction managers with the LLM provider
 generative_model = SimpleGenerativeModel()

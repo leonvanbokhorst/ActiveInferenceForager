@@ -1,8 +1,17 @@
+import os
+
 from openai import OpenAI
 from active_inference_forager.providers.llm_provider import LLMProvider
 
+
 class OpenAIProvider(LLMProvider):
-    def __init__(self, api_key, model="gpt-4"):
+    def __init__(self, api_key=None, model="gpt-4"):
+        if not api_key:
+            # get from env
+            api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("API key is required.")
+
         self.api_key = api_key
         self.model = model
         self.client = OpenAI(api_key=self.api_key)
