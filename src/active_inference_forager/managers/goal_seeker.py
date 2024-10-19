@@ -56,20 +56,14 @@ class GoalSeeker(InteractionManager):
 
     def extract_features(self, user_input: str) -> Dict[str, Any]:
         doc = self.nlp(user_input)
-        entities = [(ent.text, ent.label_) for ent in doc.ents]
-        key_phrases = [chunk.text for chunk in doc.noun_chunks]
         blob = TextBlob(user_input)
         sentiment = blob.sentiment.polarity
         actions = [token.lemma_ for token in doc if token.pos_ == "VERB"]
-        dependencies = [(token.text, token.dep_, token.head.text) for token in doc]
         goal_relevance = self.calculate_goal_relevance(user_input)
 
         return {
-            "entities": entities,
-            "key_phrases": key_phrases,
             "sentiment": sentiment,
             "actions": actions,
-            "dependencies": dependencies,
             "goal_relevance": goal_relevance,
         }
 

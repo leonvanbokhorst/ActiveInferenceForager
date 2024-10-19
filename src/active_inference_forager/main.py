@@ -33,26 +33,20 @@ def main():
     try:
         # Initialize the LLM provider
         llm_provider = OpenAIProvider()
-        logger.info("LLM provider initialized")
 
         # Initialize components
         generative_model = LLMGenerativeModel(llm_provider)
         inference_engine = LLMInferenceEngine(generative_model)
-        rapport_builder = RapportBuilder(inference_engine, llm_provider)
         goal_seeker = GoalSeeker(inference_engine, llm_provider)
-        logger.info("All components initialized")
 
         # Create the agent
-        agent = LLMProactiveAgent(rapport_builder, goal_seeker)
-        logger.info("LLMProactiveAgent created")
+        agent = LLMProactiveAgent(goal_seeker)
 
         # Set initial goal
         initial_goal = "Flirt with the user and make them feel special."
         agent.set_initial_goal(initial_goal)
-        logger.info(f"Initial goal set: {initial_goal}")
 
         # Main interaction loop
-        logger.info("Starting main interaction loop")
         print("Type 'exit' to end the conversation.")
         while True:
             user_input = input("User: ")
@@ -62,21 +56,15 @@ def main():
 
             # Process user input and get response
             response = agent.process_user_input(user_input)
-            print(f"Agent: {response}")
+            print(f"\nAgent: {response}")
 
             # Log current state after each interaction
-            logger.info(f"Current goal: {agent.get_current_goal()}")
-            logger.info(f"Current free energy: {agent.get_current_free_energy()}")
-            logger.info(f"Goal hierarchy: {agent.get_goal_hierarchy()}")
 
             # Visualize goal hierarchy (placeholder)
             agent.visualize_goal_hierarchy()
 
             # Display conversation summary
             conversation_summary = agent._summarize_conversation_history()
-            print("\nConversation Summary:")
-            print(conversation_summary)
-            print()
 
             # Handle proactive behavior
             agent.handle_proactive_behavior()

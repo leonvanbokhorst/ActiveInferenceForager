@@ -30,11 +30,9 @@ logger.addHandler(console_handler)
 class LLMProactiveAgent:
     def __init__(
         self,
-        rapport_builder: RapportBuilder,
         goal_seeker: GoalSeeker,
         proactive_threshold: float = 5.0,
     ):
-        self.rapport_builder = rapport_builder
         self.goal_seeker = goal_seeker
         self.conversation_history: List[Dict[str, str]] = []
         self.current_state: Dict[str, Any] = {}
@@ -42,7 +40,6 @@ class LLMProactiveAgent:
         self.beliefs: Dict[str, Any] = {}
         self.proactive_threshold: float = proactive_threshold
         self.proactive_action_history: List[Dict[str, Any]] = []
-        logger.info("LLMProactiveAgent initialized")
 
     def process_user_input(self, user_input: str) -> str:
         logger.info(f"Processing user input: {user_input}")
@@ -61,7 +58,7 @@ class LLMProactiveAgent:
         if goal_changed:
             logger.info(f"Goal changed to: {self.goal_seeker.current_goal}")
         self._update_beliefs(observations)
-        
+
         conversation_context = self._summarize_conversation_history()
         prompt = f"""
         Given the following conversation context:
@@ -75,7 +72,7 @@ class LLMProactiveAgent:
         Current beliefs: {self.beliefs}
         """
         response = self.goal_seeker.llm_provider.generate_response(prompt)
-        
+
         logger.debug(f"Goal-oriented response: {response}")
         final_response = response
         self._update_conversation_history(user_input, final_response)
@@ -109,7 +106,6 @@ class LLMProactiveAgent:
             print(f"Agent: {response}")
 
     def set_initial_goal(self, goal: str):
-        logger.info(f"Setting initial goal: {goal}")
         self.goal_seeker.set_goal(goal)
         self.current_free_energy = self.goal_seeker.get_current_free_energy()
         logger.info(f"Initial free energy: {self.current_free_energy}")
@@ -142,6 +138,8 @@ class LLMProactiveAgent:
         current_state = self.get_current_state()
         beliefs = self.get_beliefs()
         recent_energy_changes = self.goal_seeker.get_recent_energy_changes()
+        # convert np floats to floats
+        recent_energy_changes = [float(x) for x in recent_energy_changes]
         proactive_action = self._generate_proactive_action(
             current_goal, goal_hierarchy, current_state, beliefs, recent_energy_changes
         )
@@ -192,9 +190,9 @@ class LLMProactiveAgent:
         Provide the proactive action in the following format:
         {{"type": "action_type", "description": "detailed description of the action", "reason": "reason for taking this action"}}
         """
+        logger.debug(f"Proactive action prompt: {prompt}")
         response = self.goal_seeker.llm_provider.generate_response(prompt)
         proactive_action = eval(response)
-        logger.info(f"Generated proactive action: {proactive_action}")
         return proactive_action
 
     def _execute_proactive_action(self, action: Dict[str, Any]):
@@ -232,7 +230,7 @@ class LLMProactiveAgent:
         logger.info(f"Proactive action effectiveness: {action['effectiveness']}")
 
     def _analyze_past_actions(self) -> Dict[str, float]:
-        logger.info("Analyzing past proactive actions")
+        logger.info("Analyzing past actions")
         action_effectiveness = {}
         for action in self.proactive_action_history:
             action_type = action["type"]
@@ -240,7 +238,9 @@ class LLMProactiveAgent:
             if action_type not in action_effectiveness:
                 action_effectiveness[action_type] = []
             action_effectiveness[action_type].append(
-                1.0 if effectiveness == "high" else 0.5 if effectiveness == "medium" else 0.0
+                1.0
+                if effectiveness == "high"
+                else 0.5 if effectiveness == "medium" else 0.0
             )
         for action_type, scores in action_effectiveness.items():
             action_effectiveness[action_type] = sum(scores) / len(scores)
@@ -254,17 +254,23 @@ class LLMProactiveAgent:
             return
         avg_energy_change = sum(recent_energy_changes) / len(recent_energy_changes)
         if avg_energy_change > 0:
-            self.proactive_threshold *= 0.9  # Decrease threshold if we're making progress
+            self.proactive_threshold *= (
+                0.9  # Decrease threshold if we're making progress
+            )
         else:
-            self.proactive_threshold *= 1.1  # Increase threshold if we're not making progress
-        self.proactive_threshold = max(1.0, min(10.0, self.proactive_threshold))  # Keep threshold between 1 and 10
+            self.proactive_threshold *= (
+                1.1  # Increase threshold if we're not making progress
+            )
+        self.proactive_threshold = max(
+            1.0, min(10.0, self.proactive_threshold)
+        )  # Keep threshold between 1 and 10
         logger.info(f"Adjusted proactive threshold: {self.proactive_threshold}")
 
     def _summarize_conversation_history(self) -> str:
         logger.info("Summarizing conversation history")
         if not self.conversation_history:
             return "No conversation history available."
-        
+
         prompt = f"""
         Summarize the following conversation history in a concise manner, highlighting key points and themes:
         
@@ -272,7 +278,7 @@ class LLMProactiveAgent:
         
         Provide a summary that captures the main topics discussed, any decisions made, and the overall direction of the conversation.
         """
-        
+
         summary = self.goal_seeker.llm_provider.generate_response(prompt)
         logger.info(f"Conversation summary: {summary}")
         return summary
@@ -280,19 +286,23 @@ class LLMProactiveAgent:
     def _extract_conversation_context(self) -> str:
         logger.info("Extracting conversation context")
         recent_messages = self.conversation_history[-5:]  # Get the last 5 messages
-        context = "\n".join([f"User: {msg['user']}\nAgent: {msg['agent']}" for msg in recent_messages])
+        context = "\n".join(
+            [f"User: {msg['user']}\nAgent: {msg['agent']}" for msg in recent_messages]
+        )
         return context
 
     def _analyze_user_sentiment(self) -> str:
         logger.info("Analyzing user sentiment")
         if not self.conversation_history:
             return "neutral"
-        last_user_message = self.conversation_history[-1]['user']
+        last_user_message = self.conversation_history[-1]["user"]
         prompt = f"""
         Analyze the sentiment of the following user message:
         "{last_user_message}"
         Provide the sentiment as one of: positive, neutral, or negative.
         """
-        sentiment = self.goal_seeker.llm_provider.generate_response(prompt).strip().lower()
+        sentiment = (
+            self.goal_seeker.llm_provider.generate_response(prompt).strip().lower()
+        )
         logger.info(f"Detected user sentiment: {sentiment}")
         return sentiment
