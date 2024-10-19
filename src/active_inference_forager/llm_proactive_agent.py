@@ -58,6 +58,7 @@ class LLMProactiveAgent:
         if goal_changed:
             logger.info(f"Goal changed to: {self.goal_seeker.current_goal}")
         self._update_beliefs(observations)
+  
 
         conversation_context = self._summarize_conversation_history()
         prompt = f"""
@@ -76,11 +77,9 @@ class LLMProactiveAgent:
         logger.debug(f"Goal-oriented response: {response}")
         final_response = response
         self._update_conversation_history(user_input, final_response)
-        logger.info(f"Final response: {final_response}")
         return final_response
 
     def _update_beliefs(self, observations: Dict[str, Any]):
-        logger.info("Updating beliefs based on new observations")
         updated_beliefs = self.goal_seeker.inference_engine.infer(observations)
         self.beliefs.update(updated_beliefs)
         logger.debug(f"Updated beliefs: {self.beliefs}")
@@ -93,17 +92,14 @@ class LLMProactiveAgent:
         )
 
     def run(self):
-        logger.info(
-            "LLM Proactive Agent is ready. Type 'exit' to end the conversation."
-        )
         while True:
             user_input = input("User: ")
             if user_input.lower() == "exit":
                 logger.info("Conversation ended by user")
-                print("Agent: Goodbye!")
+                logger.info("Agent: Goodbye!")
                 break
             response = self.process_user_input(user_input)
-            print(f"Agent: {response}")
+            logger.info(f"Agent: {response}")
 
     def set_initial_goal(self, goal: str):
         self.goal_seeker.set_goal(goal)
@@ -126,12 +122,10 @@ class LLMProactiveAgent:
         return self.beliefs
 
     def visualize_goal_hierarchy(self):
-        logger.info("Goal Hierarchy Visualization:")
         for i, goal in enumerate(self.get_goal_hierarchy()):
             logger.info(f"{i+1}. {goal}")
 
     def handle_proactive_behavior(self):
-        logger.info("Handling proactive behavior")
         self._adjust_proactive_threshold()
         current_goal = self.get_current_goal()
         goal_hierarchy = self.get_goal_hierarchy()
