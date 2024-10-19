@@ -61,7 +61,21 @@ class LLMProactiveAgent:
         if goal_changed:
             logger.info(f"Goal changed to: {self.goal_seeker.current_goal}")
         self._update_beliefs(observations)
-        response = self.goal_seeker.process_input(user_input)
+        
+        conversation_context = self._summarize_conversation_history()
+        prompt = f"""
+        Given the following conversation context:
+        {conversation_context}
+        
+        And the current user input:
+        {user_input}
+        
+        Generate a response that takes into account the conversation history and the current context.
+        Current goal: {self.goal_seeker.current_goal}
+        Current beliefs: {self.beliefs}
+        """
+        response = self.goal_seeker.llm_provider.generate_response(prompt)
+        
         logger.debug(f"Goal-oriented response: {response}")
         final_response = response
         self._update_conversation_history(user_input, final_response)
@@ -145,7 +159,7 @@ class LLMProactiveAgent:
     ) -> Dict[str, Any]:
         logger.info("Generating proactive action")
         action_effectiveness = self._analyze_past_actions()
-        conversation_context = self._extract_conversation_context()
+        conversation_context = self._summarize_conversation_history()
         user_sentiment = self._analyze_user_sentiment()
         prompt = f"""
         Based on the following information, generate a proactive action for the agent to take:
@@ -246,10 +260,27 @@ class LLMProactiveAgent:
         self.proactive_threshold = max(1.0, min(10.0, self.proactive_threshold))  # Keep threshold between 1 and 10
         logger.info(f"Adjusted proactive threshold: {self.proactive_threshold}")
 
+    def _summarize_conversation_history(self) -> str:
+        logger.info("Summarizing conversation history")
+        if not self.conversation_history:
+            return "No conversation history available."
+        
+        prompt = f"""
+        Summarize the following conversation history in a concise manner, highlighting key points and themes:
+        
+        {self._extract_conversation_context()}
+        
+        Provide a summary that captures the main topics discussed, any decisions made, and the overall direction of the conversation.
+        """
+        
+        summary = self.goal_seeker.llm_provider.generate_response(prompt)
+        logger.info(f"Conversation summary: {summary}")
+        return summary
+
     def _extract_conversation_context(self) -> str:
         logger.info("Extracting conversation context")
         recent_messages = self.conversation_history[-5:]  # Get the last 5 messages
-        context = "\n".join([f"{msg['user']}: {msg['agent']}" for msg in recent_messages])
+        context = "\n".join([f"User: {msg['user']}\nAgent: {msg['agent']}" for msg in recent_messages])
         return context
 
     def _analyze_user_sentiment(self) -> str:

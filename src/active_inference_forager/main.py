@@ -47,13 +47,13 @@ def main():
         logger.info("LLMProactiveAgent created")
 
         # Set initial goal
-        initial_goal = "Assist the user with their queries while building rapport"
+        initial_goal = "Flirt with the user and make them feel special."
         agent.set_initial_goal(initial_goal)
         logger.info(f"Initial goal set: {initial_goal}")
 
         # Main interaction loop
         logger.info("Starting main interaction loop")
-        print("Welcome! I'm here to assist you. Type 'exit' to end the conversation.")
+        print("Type 'exit' to end the conversation.")
         while True:
             user_input = input("User: ")
             if user_input.lower() == "exit":
@@ -71,6 +71,12 @@ def main():
 
             # Visualize goal hierarchy (placeholder)
             agent.visualize_goal_hierarchy()
+
+            # Display conversation summary
+            conversation_summary = agent._summarize_conversation_history()
+            print("\nConversation Summary:")
+            print(conversation_summary)
+            print()
 
             # Handle proactive behavior
             agent.handle_proactive_behavior()
