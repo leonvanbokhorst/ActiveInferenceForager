@@ -1,5 +1,4 @@
 import os
-import logging
 from active_inference_forager.llm_proactive_agent import LLMProactiveAgent
 from active_inference_forager.models.llm_generative_model import LLMGenerativeModel
 from active_inference_forager.models.llm_inference_engine import LLMInferenceEngine
@@ -7,11 +6,27 @@ from active_inference_forager.providers.openai_provider import OpenAIProvider
 from active_inference_forager.managers.rapport_builder import RapportBuilder
 from active_inference_forager.managers.goal_seeker import GoalSeeker
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+import logging
+from logging.handlers import RotatingFileHandler
+
+# Set up logger
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# Create handlers
+file_handler = RotatingFileHandler(
+    "logs/proactive_agent.log", maxBytes=1000000, backupCount=3
+)
+console_handler = logging.StreamHandler()
+
+# Create formatters and add it to handlers
+log_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(log_format)
+console_handler.setFormatter(log_format)
+
+# Add handlers to the logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 
 def main():

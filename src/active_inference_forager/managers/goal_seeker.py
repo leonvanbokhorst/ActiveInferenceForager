@@ -1,11 +1,33 @@
 import spacy
 import numpy as np
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from textblob import TextBlob
 from active_inference_forager.managers.interaction_manager import InteractionManager
 from active_inference_forager.providers.llm_provider import LLMProvider
 from active_inference_forager.models.llm_inference_engine import LLMInferenceEngine
+
+import logging
+from logging.handlers import RotatingFileHandler
+
+# Set up logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# Create handlers
+file_handler = RotatingFileHandler(
+    "logs/proactive_agent.log", maxBytes=1000000, backupCount=3
+)
+console_handler = logging.StreamHandler()
+
+# Create formatters and add it to handlers
+log_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(log_format)
+console_handler.setFormatter(log_format)
+
+# Add handlers to the logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 
 class GoalSeeker(InteractionManager):
@@ -15,6 +37,7 @@ class GoalSeeker(InteractionManager):
         self.current_goal = None
         self.goal_hierarchy = []
         self.nlp = spacy.load("en_core_web_sm")
+        self.recent_energy_changes = []
 
     def set_goal(self, goal: str):
         self.current_goal = goal
@@ -61,6 +84,7 @@ class GoalSeeker(InteractionManager):
         Provide only a number as the response.
         """
         relevance_score = float(self.llm_provider.generate_response(prompt))
+        logger.info(f"Calculated goal relevance: {relevance_score}")
         return min(max(relevance_score, 0.0), 1.0)
 
     def generate_response(
@@ -110,7 +134,9 @@ class GoalSeeker(InteractionManager):
 
         Predict the likely outcome of taking this action. Provide a brief, one-sentence description.
         """
-        return self.llm_provider.generate_response(prompt)
+        response = self.llm_provider.generate_response(prompt)
+        logger.info(f"Predicted outcome: {response}")
+        return response
 
     def _update_internal_state(self, response: str):
         self.goal_relevance = self.calculate_goal_relevance(response)
@@ -123,6 +149,8 @@ class GoalSeeker(InteractionManager):
         goal_values = [self._evaluate_goal(goal) for goal in potential_goals]
         self._update_hierarchy(potential_goals, goal_values)
         self.current_goal = self.goal_hierarchy[0] if self.goal_hierarchy else None
+        logger.info(f"Updated goal hierarchy: {self.goal_hierarchy}")
+        logger.info(f"Current goal: {self.current_goal}")
 
     def _evaluate_goal(self, goal: str) -> float:
         prompt = f"""
@@ -137,7 +165,9 @@ class GoalSeeker(InteractionManager):
         """
         response = self.llm_provider.generate_response(prompt)
         scores = [float(score.strip()) for score in response.split(",")]
-        return np.mean(scores)
+        avg_score = np.mean(scores)
+        logger.info(f"Evaluation for goal '{goal}': {avg_score}")
+        return avg_score
 
     def _generate_potential_goals(self) -> List[str]:
         prompt = f"""
@@ -147,7 +177,11 @@ class GoalSeeker(InteractionManager):
         Provide each goal on a new line.
         """
         response = self.llm_provider.generate_response(prompt)
-        return [goal.strip() for goal in response.split("\n") if goal.strip()]
+        potential_goals = [
+            goal.strip() for goal in response.split("\n") if goal.strip()
+        ]
+        logger.info(f"Generated potential goals: {potential_goals}")
+        return potential_goals
 
     def _update_hierarchy(self, potential_goals: List[str], goal_values: List[float]):
         all_goals = self.goal_hierarchy + potential_goals
@@ -161,6 +195,8 @@ class GoalSeeker(InteractionManager):
         action = self.inference_engine.choose_action({})
         expected_outcome = self._predict_outcome(action, {})
         actual_outcome = self._evaluate_current_state()
+        logger.info(f"Expected outcome: {expected_outcome}")
+        logger.info(f"Actual outcome: {actual_outcome}")
 
         prediction_error = self._calculate_prediction_error(
             expected_outcome, actual_outcome
@@ -168,8 +204,12 @@ class GoalSeeker(InteractionManager):
 
         complexity = self._calculate_complexity()
         entropy = self._calculate_entropy()
+        logger.info(f"Prediction error: {prediction_error}")
+        logger.info(f"Complexity: {complexity}")
+        logger.info(f"Entropy: {entropy}")
 
         free_energy = prediction_error + complexity + entropy
+        logger.info(f"Free energy for goal '{goal}': {free_energy}")
 
         return free_energy
 
@@ -178,22 +218,29 @@ class GoalSeeker(InteractionManager):
             expected_float = float(expected)
         except ValueError:
             expected_float = 0.5  # Default value if conversion fails
-        
+
         # Ensure both expected and actual are scalar values
         if isinstance(actual, np.ndarray):
             actual = np.mean(actual)
-        
+
         return np.square(expected_float - actual)
 
     def _calculate_complexity(self) -> float:
         prior = self._get_prior_belief()
         posterior = self._get_posterior_belief()
-        
+
         # Ensure prior and posterior have the same shape
         max_len = max(len(prior), len(posterior))
-        prior = np.pad(prior, (0, max_len - len(prior)), 'constant', constant_values=(1e-10,))
-        posterior = np.pad(posterior, (0, max_len - len(posterior)), 'constant', constant_values=(1e-10,))
-        
+        prior = np.pad(
+            prior, (0, max_len - len(prior)), "constant", constant_values=(1e-10,)
+        )
+        posterior = np.pad(
+            posterior,
+            (0, max_len - len(posterior)),
+            "constant",
+            constant_values=(1e-10,),
+        )
+
         return self._kl_divergence(posterior, prior)
 
     def _calculate_entropy(self) -> float:
@@ -205,12 +252,10 @@ class GoalSeeker(InteractionManager):
     def _kl_divergence(self, p, q):
         # Ensure p and q have the same shape
         max_len = max(len(p), len(q))
-        p = np.pad(p, (0, max_len - len(p)), 'constant', constant_values=(1e-10,))
-        q = np.pad(q, (0, max_len - len(q)), 'constant', constant_values=(1e-10,))
-        
-        return np.sum(
-            p * np.log((p + 1e-10) / (q + 1e-10))
-        )  # Add small constant to avoid division by zero
+        p = np.pad(p, (0, max_len - len(p)), "constant", constant_values=(1e-10,))
+        q = np.pad(q, (0, max_len - len(q)), "constant", constant_values=(1e-10,))
+
+        return np.sum(p * np.log((p + 1e-10) / (q + 1e-10)))
 
     def _get_prior_belief(self) -> np.array:
         prompt = f"""
@@ -220,9 +265,10 @@ class GoalSeeker(InteractionManager):
         0.XX, 0.YY, 0.ZZ, ...
         """
         response = self.llm_provider.generate_response(prompt)
-        probabilities = re.findall(r'0\.\d+', response)
+        probabilities = re.findall(r"0\.\d+", response)
         if not probabilities:
             return np.array([1.0])  # Default to certainty if no probabilities found
+        logger.info(f"Prior belief: {probabilities}")
         return np.array([float(p) for p in probabilities])
 
     def _get_posterior_belief(self) -> np.array:
@@ -234,9 +280,10 @@ class GoalSeeker(InteractionManager):
         0.XX, 0.YY, 0.ZZ, ...
         """
         response = self.llm_provider.generate_response(prompt)
-        probabilities = re.findall(r'0\.\d+', response)
+        probabilities = re.findall(r"0\.\d+", response)
         if not probabilities:
             return np.array([1.0])  # Default to certainty if no probabilities found
+        logger.info(f"Posterior belief: {probabilities}")
         return np.array([float(p) for p in probabilities])
 
     def _evaluate_current_state(self) -> float:
@@ -245,9 +292,11 @@ class GoalSeeker(InteractionManager):
         Evaluate the current state on a scale of 0 to 1, where 0 means the current state is very far from the goal, and 1 means the goal has been achieved.
         Provide only a number as the response.
         """
-        return float(self.llm_provider.generate_response(prompt))
+        current_state = float(self.llm_provider.generate_response(prompt))
+        logger.info(f"Evaluation of current state: {current_state}")
+        return current_state
 
-    def minimize_free_energy(self):
+    def minimize_free_energy(self) -> Tuple[float, bool]:
         current_free_energy = self._calculate_free_energy(self.current_goal)
         alternative_goals = self.goal_hierarchy[:3]  # Consider top 3 alternative goals
         alternative_energies = [
@@ -255,10 +304,27 @@ class GoalSeeker(InteractionManager):
         ]
 
         min_energy = min(alternative_energies + [current_free_energy])
+        goal_changed = False
+
         if min_energy < current_free_energy:
             self.current_goal = alternative_goals[
                 alternative_energies.index(min_energy)
             ]
             self.update_goal_hierarchy()
+            goal_changed = True
 
-        return min_energy
+        energy_change = current_free_energy - min_energy
+        self.recent_energy_changes.append(energy_change)
+        if len(self.recent_energy_changes) > 10:
+            self.recent_energy_changes.pop(0)
+
+        logger.info(f"Minimized free energy: {min_energy}")
+        logger.info(f"Goal changed: {goal_changed}")
+
+        return min_energy, goal_changed
+
+    def get_current_free_energy(self) -> float:
+        return self._calculate_free_energy(self.current_goal)
+
+    def get_recent_energy_changes(self) -> List[float]:
+        return self.recent_energy_changes

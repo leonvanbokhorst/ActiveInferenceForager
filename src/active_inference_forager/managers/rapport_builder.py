@@ -8,11 +8,11 @@ from active_inference_forager.managers.interaction_manager import InteractionMan
 
 # Set up logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 # Create handlers
 file_handler = RotatingFileHandler(
-    "logs/rapport_builder.log", maxBytes=10000, backupCount=3
+    "logs/proactive_agent.log", maxBytes=1000000, backupCount=3
 )
 console_handler = logging.StreamHandler()
 
@@ -48,7 +48,7 @@ class RapportBuilder(InteractionManager):
         return response
 
     def handle_proactive_behavior(self):
-        logger.info("Handling proactive behavior")
+        #logger.info("Handling proactive behavior")
         pass
 
     def extract_features(self, user_input):
@@ -122,10 +122,10 @@ class RapportBuilder(InteractionManager):
         """
 
         logger.info(f"RapportBuilder: Generating response for action '{action}'")
-        logger.debug(f"RapportBuilder: User Prompt: {user_prompt}")
+        #Slogger.debug(f"RapportBuilder: User Prompt: {user_prompt}")
 
         response = self.llm_provider.generate_response(
             user_prompt, system_prompt=system_prompt
         )
-        logger.info("Response generated successfully")
+        logger.info(f"Generated response: {response}")
         return response
