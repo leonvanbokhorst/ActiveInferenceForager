@@ -26,9 +26,15 @@ class LLMGenerativeModel(GenerativeModel):
         try:
             # Parse the LLM response to extract predictions
             predictions = json.loads(llm_response)
-
         except json.JSONDecodeError:
             print("Error: Unable to parse LLM response as JSON.")
+            # Return a default prediction if parsing fails
+            predictions = {
+                "intent": "unknown",
+                "emotion": "neutral",
+                "user_state": "uncertain",
+                "conversation_context": "general"
+            }
 
         return predictions
 

@@ -1,4 +1,5 @@
 import os
+import logging
 from active_inference_forager.llm_proactive_agent import LLMProactiveAgent
 from active_inference_forager.models.llm_generative_model import LLMGenerativeModel
 from active_inference_forager.models.llm_inference_engine import LLMInferenceEngine
@@ -6,28 +7,66 @@ from active_inference_forager.providers.openai_provider import OpenAIProvider
 from active_inference_forager.managers.rapport_builder import RapportBuilder
 from active_inference_forager.managers.goal_seeker import GoalSeeker
 
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 
 def main():
     try:
-        # When instantiating the agent
+        # Initialize the LLM provider
         llm_provider = OpenAIProvider()
+        logger.info("LLM provider initialized")
 
-        # Initialize inference engine and interaction managers with the LLM provider
+        # Initialize components
         generative_model = LLMGenerativeModel(llm_provider)
         inference_engine = LLMInferenceEngine(generative_model)
         rapport_builder = RapportBuilder(inference_engine, llm_provider)
         goal_seeker = GoalSeeker(inference_engine, llm_provider)
+        logger.info("All components initialized")
 
         # Create the agent
         agent = LLMProactiveAgent(rapport_builder, goal_seeker)
+        logger.info("LLMProactiveAgent created")
 
-        # Run the agent
-        agent.run()
+        # Set initial goal
+        initial_goal = "Assist the user with their queries while building rapport"
+        agent.set_initial_goal(initial_goal)
+        logger.info(f"Initial goal set: {initial_goal}")
+
+        # Main interaction loop
+        logger.info("Starting main interaction loop")
+        print("Welcome! I'm here to assist you. Type 'exit' to end the conversation.")
+        while True:
+            user_input = input("User: ")
+            if user_input.lower() == "exit":
+                print("Thank you for the conversation. Goodbye!")
+                break
+
+            # Process user input and get response
+            response = agent.process_user_input(user_input)
+            print(f"Agent: {response}")
+
+            # Log current state after each interaction
+            logger.info(f"Current goal: {agent.get_current_goal()}")
+            logger.info(f"Current free energy: {agent.get_current_free_energy()}")
+            logger.info(f"Goal hierarchy: {agent.get_goal_hierarchy()}")
+
+            # Visualize goal hierarchy (placeholder)
+            agent.visualize_goal_hierarchy()
+
+            # Handle proactive behavior
+            agent.handle_proactive_behavior()
+
     except ValueError as ve:
+        logger.error(f"ValueError: {str(ve)}")
         print(f"Error: {str(ve)}")
         print("Please set your OpenAI API key as an environment variable:")
         print("export OPENAI_API_KEY='your-api-key-here'")
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         print(f"An unexpected error occurred: {str(e)}")
 
 

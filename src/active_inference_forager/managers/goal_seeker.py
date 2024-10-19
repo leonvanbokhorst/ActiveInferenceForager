@@ -1,5 +1,6 @@
 import spacy
 import numpy as np
+import re
 from typing import List, Dict, Any
 from textblob import TextBlob
 from active_inference_forager.managers.interaction_manager import InteractionManager
@@ -18,11 +19,12 @@ class GoalSeeker(InteractionManager):
     def set_goal(self, goal: str):
         self.current_goal = goal
 
-    def handle_proactive_behavior(self, user_input: str) -> str:
-        pass
+    def handle_proactive_behavior(self):
+        if self.goal_relevance < 0.3:
+            self.update_goal_hierarchy()
+            self.minimize_free_energy()
 
     def process_input(self, user_input: str) -> str:
-        # Process user input and generate a response
         observations = self.extract_features(user_input)
         beliefs = self.inference_engine.infer(observations)
         action = self.inference_engine.choose_action(beliefs)
@@ -31,24 +33,12 @@ class GoalSeeker(InteractionManager):
 
     def extract_features(self, user_input: str) -> Dict[str, Any]:
         doc = self.nlp(user_input)
-
-        # Extract entities
         entities = [(ent.text, ent.label_) for ent in doc.ents]
-
-        # Extract key phrases (noun chunks)
         key_phrases = [chunk.text for chunk in doc.noun_chunks]
-
-        # Extract sentiment
         blob = TextBlob(user_input)
         sentiment = blob.sentiment.polarity
-
-        # Extract main verbs (actions)
         actions = [token.lemma_ for token in doc if token.pos_ == "VERB"]
-
-        # Extract dependencies
         dependencies = [(token.text, token.dep_, token.head.text) for token in doc]
-
-        # Relevance to current goal
         goal_relevance = self.calculate_goal_relevance(user_input)
 
         return {
@@ -63,8 +53,6 @@ class GoalSeeker(InteractionManager):
     def calculate_goal_relevance(self, user_input: str) -> float:
         if not self.current_goal:
             return 0.0
-
-        # Use the LLM to calculate relevance
         prompt = f"""
         Given the current goal: "{self.current_goal}"
         And the user input: "{user_input}"
@@ -72,25 +60,16 @@ class GoalSeeker(InteractionManager):
         On a scale of 0 to 1, how relevant is the user input to the current goal?
         Provide only a number as the response.
         """
-
         relevance_score = float(self.llm_provider.generate_response(prompt))
-        return min(
-            max(relevance_score, 0.0), 1.0
-        )  # Ensure the score is between 0 and 1
+        return min(max(relevance_score, 0.0), 1.0)
 
     def generate_response(
         self, action: str, user_input: str, observations: Dict[str, Any]
     ) -> str:
-        # Prepare context for response generation
         context = self._prepare_context(action, observations)
-
-        # Generate response using LLM
         prompt = self._create_response_prompt(context, user_input)
         response = self.llm_provider.generate_response(prompt)
-
-        # Update internal state based on the generated response
         self._update_internal_state(response)
-
         return response
 
     def _prepare_context(
@@ -123,7 +102,6 @@ class GoalSeeker(InteractionManager):
         """
 
     def _predict_outcome(self, action: str, observations: Dict[str, Any]) -> str:
-        # Use the LLM to predict the outcome of the chosen action
         prompt = f"""
         Given the current goal: "{self.current_goal}"
         Chosen action: "{action}"
@@ -135,27 +113,15 @@ class GoalSeeker(InteractionManager):
         return self.llm_provider.generate_response(prompt)
 
     def _update_internal_state(self, response: str):
-        # Update goal relevance based on the generated response
         self.goal_relevance = self.calculate_goal_relevance(response)
-
-        # If the goal relevance is low, consider updating the goal
-        if self.goal_relevance < 0.3:  # This threshold can be adjusted
+        if self.goal_relevance < 0.3:
             self.update_goal_hierarchy()
 
     def update_goal_hierarchy(self):
-        # Evaluate current goal
         current_goal_value = self._evaluate_goal(self.current_goal)
-
-        # Generate potential new goals
         potential_goals = self._generate_potential_goals()
-
-        # Evaluate potential goals
         goal_values = [self._evaluate_goal(goal) for goal in potential_goals]
-
-        # Update goal hierarchy
         self._update_hierarchy(potential_goals, goal_values)
-
-        # Set new current goal
         self.current_goal = self.goal_hierarchy[0] if self.goal_hierarchy else None
 
     def _evaluate_goal(self, goal: str) -> float:
@@ -171,7 +137,7 @@ class GoalSeeker(InteractionManager):
         """
         response = self.llm_provider.generate_response(prompt)
         scores = [float(score.strip()) for score in response.split(",")]
-        return np.mean(scores)  # Simple average of all scores
+        return np.mean(scores)
 
     def _generate_potential_goals(self) -> List[str]:
         prompt = f"""
@@ -184,28 +150,94 @@ class GoalSeeker(InteractionManager):
         return [goal.strip() for goal in response.split("\n") if goal.strip()]
 
     def _update_hierarchy(self, potential_goals: List[str], goal_values: List[float]):
-        # Combine current goals and potential new goals
         all_goals = self.goal_hierarchy + potential_goals
         all_values = [
             self._evaluate_goal(goal) for goal in self.goal_hierarchy
         ] + goal_values
-
-        # Sort goals by their values
         sorted_goals = [x for _, x in sorted(zip(all_values, all_goals), reverse=True)]
-
-        # Update goal hierarchy, keeping top 5 goals
         self.goal_hierarchy = sorted_goals[:5]
 
     def _calculate_free_energy(self, goal: str) -> float:
-        # Simplified free energy calculation
-        # In a more complex implementation, this would involve comparing predicted and actual outcomes
-        expected_outcome = self._predict_outcome(
-            self.inference_engine.choose_action({}), {}
-        )
+        action = self.inference_engine.choose_action({})
+        expected_outcome = self._predict_outcome(action, {})
         actual_outcome = self._evaluate_current_state()
-        return abs(
-            float(expected_outcome) - float(actual_outcome)
-        )  # BUG: actual_outcome is a string, should be a float
+
+        prediction_error = self._calculate_prediction_error(
+            expected_outcome, actual_outcome
+        )
+
+        complexity = self._calculate_complexity()
+        entropy = self._calculate_entropy()
+
+        free_energy = prediction_error + complexity + entropy
+
+        return free_energy
+
+    def _calculate_prediction_error(self, expected: str, actual: float) -> float:
+        try:
+            expected_float = float(expected)
+        except ValueError:
+            expected_float = 0.5  # Default value if conversion fails
+        
+        # Ensure both expected and actual are scalar values
+        if isinstance(actual, np.ndarray):
+            actual = np.mean(actual)
+        
+        return np.square(expected_float - actual)
+
+    def _calculate_complexity(self) -> float:
+        prior = self._get_prior_belief()
+        posterior = self._get_posterior_belief()
+        
+        # Ensure prior and posterior have the same shape
+        max_len = max(len(prior), len(posterior))
+        prior = np.pad(prior, (0, max_len - len(prior)), 'constant', constant_values=(1e-10,))
+        posterior = np.pad(posterior, (0, max_len - len(posterior)), 'constant', constant_values=(1e-10,))
+        
+        return self._kl_divergence(posterior, prior)
+
+    def _calculate_entropy(self) -> float:
+        posterior = self._get_posterior_belief()
+        return -np.sum(
+            posterior * np.log(posterior + 1e-10)
+        )  # Add small constant to avoid log(0)
+
+    def _kl_divergence(self, p, q):
+        # Ensure p and q have the same shape
+        max_len = max(len(p), len(q))
+        p = np.pad(p, (0, max_len - len(p)), 'constant', constant_values=(1e-10,))
+        q = np.pad(q, (0, max_len - len(q)), 'constant', constant_values=(1e-10,))
+        
+        return np.sum(
+            p * np.log((p + 1e-10) / (q + 1e-10))
+        )  # Add small constant to avoid division by zero
+
+    def _get_prior_belief(self) -> np.array:
+        prompt = f"""
+        Given the current goal: "{self.current_goal}"
+        Provide a probability distribution over possible outcomes before taking any action.
+        Return the distribution as a list of probabilities that sum to 1, formatted as follows:
+        0.XX, 0.YY, 0.ZZ, ...
+        """
+        response = self.llm_provider.generate_response(prompt)
+        probabilities = re.findall(r'0\.\d+', response)
+        if not probabilities:
+            return np.array([1.0])  # Default to certainty if no probabilities found
+        return np.array([float(p) for p in probabilities])
+
+    def _get_posterior_belief(self) -> np.array:
+        prompt = f"""
+        Given the current goal: "{self.current_goal}"
+        And the current state: {self._evaluate_current_state()}
+        Provide an updated probability distribution over possible outcomes.
+        Return the distribution as a list of probabilities that sum to 1, formatted as follows:
+        0.XX, 0.YY, 0.ZZ, ...
+        """
+        response = self.llm_provider.generate_response(prompt)
+        probabilities = re.findall(r'0\.\d+', response)
+        if not probabilities:
+            return np.array([1.0])  # Default to certainty if no probabilities found
+        return np.array([float(p) for p in probabilities])
 
     def _evaluate_current_state(self) -> float:
         prompt = f"""
@@ -216,16 +248,17 @@ class GoalSeeker(InteractionManager):
         return float(self.llm_provider.generate_response(prompt))
 
     def minimize_free_energy(self):
-        # Calculate free energy for current goal and top alternative
         current_free_energy = self._calculate_free_energy(self.current_goal)
-        alternative_goal = (
-            self.goal_hierarchy[1]
-            if len(self.goal_hierarchy) > 1
-            else self.current_goal
-        )
-        alternative_free_energy = self._calculate_free_energy(alternative_goal)
+        alternative_goals = self.goal_hierarchy[:3]  # Consider top 3 alternative goals
+        alternative_energies = [
+            self._calculate_free_energy(goal) for goal in alternative_goals
+        ]
 
-        # If alternative goal has lower free energy, switch to it
-        if alternative_free_energy < current_free_energy:
-            self.current_goal = alternative_goal
-            self.update_goal_hierarchy()  # Reorganize hierarchy based on new current goal
+        min_energy = min(alternative_energies + [current_free_energy])
+        if min_energy < current_free_energy:
+            self.current_goal = alternative_goals[
+                alternative_energies.index(min_energy)
+            ]
+            self.update_goal_hierarchy()
+
+        return min_energy
