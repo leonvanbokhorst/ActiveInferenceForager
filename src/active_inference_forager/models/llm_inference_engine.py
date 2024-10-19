@@ -7,6 +7,18 @@ class LLMInferenceEngine:
         self.belief_state = {}
         self.memory = []  # Log of previous interactions
 
+    def rapid_belief_update(self, user_input, sentiment):
+        urgent_update_needed = sentiment < -0.5 or any(
+            phrase in user_input.lower()
+            for phrase in ["stop", "leave me alone", "not interested"]
+        )
+        if urgent_update_needed:
+            self.belief_state = {
+                "user_comfort": "low",
+                "conversation_state": "needs_termination",
+                "priority": "respect_boundaries",
+            }
+
     def infer(self, observations):
         self.memory.append(observations)
         self.update_beliefs(observations)

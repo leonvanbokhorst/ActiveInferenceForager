@@ -1,6 +1,8 @@
 import spacy
 import numpy as np
 import re
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
 from typing import List, Dict, Any, Tuple
 from textblob import TextBlob
 from active_inference_forager.managers.interaction_manager import InteractionManager
@@ -38,6 +40,17 @@ class GoalSeeker(InteractionManager):
         self.goal_hierarchy = []
         self.nlp = spacy.load("en_core_web_sm")
         self.recent_energy_changes = []
+        self.user_comfort_goal = "Ensure user comfort and respect boundaries"
+        nltk.download("vader_lexicon")
+        self.sia = SentimentIntensityAnalyzer()
+
+    def rapid_goal_adjustment(self, user_sentiment, user_input):
+        if user_sentiment < -0.5 or any(
+            phrase in user_input.lower()
+            for phrase in ["stop", "leave me alone", "not interested"]
+        ):
+            self.current_goal = self.user_comfort_goal
+            self.goal_hierarchy.insert(0, self.user_comfort_goal)
 
     def set_goal(self, goal: str):
         self.current_goal = goal
@@ -55,15 +68,12 @@ class GoalSeeker(InteractionManager):
         return response
 
     def extract_features(self, user_input: str) -> Dict[str, Any]:
-        doc = self.nlp(user_input)
-        blob = TextBlob(user_input)
-        sentiment = blob.sentiment.polarity
-        actions = [token.lemma_ for token in doc if token.pos_ == "VERB"]
         goal_relevance = self.calculate_goal_relevance(user_input)
+        sentiment_scores = self.sia.polarity_scores(user_input)
+        sentiment = sentiment_scores["compound"]
 
         return {
             "sentiment": sentiment,
-            "actions": actions,
             "goal_relevance": goal_relevance,
         }
 
@@ -292,7 +302,7 @@ class GoalSeeker(InteractionManager):
 
     def minimize_free_energy(self) -> Tuple[float, bool]:
         current_free_energy = self._calculate_free_energy(self.current_goal)
-        alternative_goals = self.goal_hierarchy[:3]  # Consider top 3 alternative goals
+        alternative_goals = self.goal_hierarchy[:3]
         alternative_energies = [
             self._calculate_free_energy(goal) for goal in alternative_goals
         ]
@@ -300,20 +310,15 @@ class GoalSeeker(InteractionManager):
         min_energy = min(alternative_energies + [current_free_energy])
         goal_changed = False
 
-        if min_energy < current_free_energy:
+        if (
+            min_energy < current_free_energy
+            and self.current_goal != self.user_comfort_goal
+        ):
             self.current_goal = alternative_goals[
                 alternative_energies.index(min_energy)
             ]
             self.update_goal_hierarchy()
             goal_changed = True
-
-        energy_change = current_free_energy - min_energy
-        self.recent_energy_changes.append(energy_change)
-        if len(self.recent_energy_changes) > 10:
-            self.recent_energy_changes.pop(0)
-
-        logger.info(f"Minimized free energy: {min_energy}")
-        logger.info(f"Goal changed: {goal_changed}")
 
         return min_energy, goal_changed
 

@@ -40,44 +40,38 @@ class LLMProactiveAgent:
         self.beliefs: Dict[str, Any] = {}
         self.proactive_threshold: float = proactive_threshold
         self.proactive_action_history: List[Dict[str, Any]] = []
+        self.user_boundaries = set()
+        self.ethical_violation_count = 0
+        self.max_ethical_violations = 3
+
+    def check_ethical_constraints(self, proposed_action):
+        if any(boundary in proposed_action for boundary in self.user_boundaries):
+            self.ethical_violation_count += 1
+            if self.ethical_violation_count >= self.max_ethical_violations:
+                return "TERMINATE_CONVERSATION"
+            return False
+        return True
+
+    def update_user_boundaries(self, user_input):
+        negative_phrases = ["leave me alone", "not interested", "stop", "go away"]
+        for phrase in negative_phrases:
+            if phrase in user_input.lower():
+                self.user_boundaries.add(phrase)
 
     def process_user_input(self, user_input: str) -> str:
-        logger.info(f"Processing user input: {user_input}")
+        self.update_user_boundaries(user_input)
         observations = self.goal_seeker.extract_features(user_input)
-        logger.debug(f"Extracted features: {observations}")
-        self.current_state.update(observations)
-        new_free_energy, goal_changed = self.goal_seeker.minimize_free_energy()
-        energy_change = self.current_free_energy - new_free_energy
-        if energy_change > 0:
-            logger.info(
-                f"Free energy reduced from {self.current_free_energy} to {new_free_energy}"
-            )
-            self.current_free_energy = new_free_energy
-        else:
-            logger.info(f"Free energy remained at {self.current_free_energy}")
-        if goal_changed:
-            logger.info(f"Goal changed to: {self.goal_seeker.current_goal}")
-        self._update_beliefs(observations)
-  
+        self.goal_seeker.rapid_goal_adjustment(observations["sentiment"], user_input)
+        self.goal_seeker.inference_engine.rapid_belief_update(
+            user_input, observations["sentiment"]
+        )
 
-        conversation_context = self._summarize_conversation_history()
-        prompt = f"""
-        Given the following conversation context:
-        {conversation_context}
-        
-        And the current user input:
-        {user_input}
-        
-        Generate a response that takes into account the conversation history and the current context.
-        Current goal: {self.goal_seeker.current_goal}
-        Current beliefs: {self.beliefs}
-        """
-        response = self.goal_seeker.llm_provider.generate_response(prompt)
+        response = self.goal_seeker.process_input(user_input)
+        if not self.check_ethical_constraints(response):
+            return "I apologize, but I think it's best if we end our conversation here. Thank you for your time."
 
-        logger.debug(f"Goal-oriented response: {response}")
-        final_response = response
-        self._update_conversation_history(user_input, final_response)
-        return final_response
+        self._update_conversation_history(user_input, response)
+        return response
 
     def _update_beliefs(self, observations: Dict[str, Any]):
         updated_beliefs = self.goal_seeker.inference_engine.infer(observations)
