@@ -401,7 +401,7 @@ def process_user_input(user_input: str, state: EnhancedConversationState) -> str
     3. Provide a response that either explores the user's knowledge or explains the next concept, depending on the understanding level and engagement.
     4. If the user's emotional state is negative, offer support or encouragement.
     5. Adjust your language complexity based on the user's understanding level.
-    6. Keep it short, conversational, and engaging.
+    6. Keep your response short, conversational, and engaging.
 
     Format your response as:
     Response: [your response to the user]
