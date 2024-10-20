@@ -97,20 +97,18 @@ class LanguageModel(nn.Module):
 class PolicyNetwork(nn.Module):
     def __init__(self, state_size: int, action_size: int):
         super().__init__()
-        self.fc1 = nn.Linear(state_size, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.action_head = nn.Linear(256, action_size)
-        self.value_head = nn.Linear(256, 1)
+        self.fc1 = nn.Linear(state_size, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.action_head = nn.Linear(128, action_size)
+        self.value_head = nn.Linear(128, 1)
+        self.log_softmax = nn.LogSoftmax(dim=-1)
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
+        x = nn.functional.leaky_relu(self.fc1(x))
+        x = nn.functional.leaky_relu(self.fc2(x))
         action_logits = self.action_head(x)
-        action_probs = torch.softmax(action_logits, dim=-1)
-        action_probs = torch.clamp(
-            action_probs, 1e-7, 1.0
-        )  # Ensure valid probabilities
-        log_probs = torch.log(action_probs)
+        log_probs = self.log_softmax(action_logits)
+        action_probs = torch.exp(log_probs)
         state_value = self.value_head(x)
         return action_probs, log_probs, state_value.squeeze(-1)
 
@@ -121,6 +119,7 @@ class EnhancedPPOAgent:
     ):
         self.policy = PolicyNetwork(state_size, action_size)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=3e-4)
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=100, gamma=0.9)
         self.language_model = language_model
         self.action_space = self.generate_action_space(action_size)
 
@@ -139,12 +138,20 @@ class EnhancedPPOAgent:
     ) -> Tuple[str, torch.Tensor, torch.Tensor]:
         state_vector = self.state_to_vector(state)
         action_probs, log_probs, state_value = self.policy(state_vector)
+        
+        print("Debug - action_probs:", action_probs)
+        print("Debug - log_probs:", log_probs)
+        print("Debug - state_value:", state_value)
+        
+        if torch.isnan(action_probs).any() or torch.isinf(action_probs).any():
+            print("Warning: NaN or Inf detected in action_probs")
+            action_probs = torch.ones_like(action_probs) / len(action_probs)
+            log_probs = torch.log(action_probs)
 
-        try:
-            action_index = torch.multinomial(action_probs, 1).item()
-        except RuntimeError:
-            print("Warning: Invalid action probabilities. Selecting random action.")
+        if random.random() < 0.1:  # 10% chance of random action
             action_index = random.randint(0, len(self.action_space) - 1)
+        else:
+            action_index = torch.multinomial(action_probs, 1).item()
 
         return self.action_space[action_index], log_probs[action_index], state_value
 
@@ -155,19 +162,21 @@ class EnhancedPPOAgent:
             else ("", "")
         )
         text = " ".join(last_turn)
-        return self.language_model(text).detach().squeeze(0)  # Ensure 1D tensor
+        vector = self.language_model(text).detach().squeeze(0)
+        print("Debug - state vector:", vector)
+        return vector
 
     def store_transition(self, state, action, reward, log_prob, value, done):
         self.states.append(state)
-        self.actions.append(self.action_space.index(action))  # Store action index
+        self.actions.append(self.action_space.index(action))
         self.rewards.append(reward)
         self.values.append(value.detach())
         self.log_probs.append(log_prob.detach())
         self.dones.append(done)
 
     def train(self):
-        if not self.values:  # Check if values are empty
-            return  # Skip training if no values are available
+        if not self.values:
+            return
 
         returns = self.compute_returns(self.values[-1])
         returns = torch.tensor(returns)
@@ -176,7 +185,7 @@ class EnhancedPPOAgent:
             advantages = returns - torch.cat([v.view(-1) for v in self.values])
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-        for _ in range(5):  # 5 epochs
+        for _ in range(5):
             for state, action_idx, old_log_prob, advantage, return_ in zip(
                 self.states, self.actions, self.log_probs, advantages, returns
             ):
@@ -194,8 +203,14 @@ class EnhancedPPOAgent:
 
                 self.optimizer.zero_grad()
                 loss.backward()
+                nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
                 self.optimizer.step()
 
+                print("Debug - loss:", loss.item())
+                print("Debug - actor_loss:", actor_loss.item())
+                print("Debug - critic_loss:", critic_loss.item())
+
+        self.scheduler.step()
         self.states, self.actions, self.rewards = [], [], []
         self.values, self.log_probs, self.dones = [], [], []
 
@@ -209,23 +224,21 @@ class EnhancedPPOAgent:
 
 
 def main():
-    # Define goals
     goals = [
         ConfigurableGoal(
             "promote_healthy_eating",
-            lambda state, action, response: 1 if "healthy" in action.lower() else -0.1,
+            lambda state, action, response: 1 if "healthy" in action.lower() else 0,
             lambda state: len(state["conversation_history"]) >= 10,
         ),
         ConfigurableGoal(
             "build_trust",
             lambda state, action, response: (
-                0.5 if state["user_model"].trust_level > 0.7 else -0.1
+                0.5 if state["user_model"].trust_level > 0.7 else 0
             ),
             lambda state: state["user_model"].trust_level >= 0.9,
         ),
     ]
 
-    # Define ethical constraints
     constraints = [
         EthicalConstraint(
             "avoid_deception",
@@ -242,14 +255,10 @@ def main():
     ]
 
     env = EnhancedChatbotEnv(goals, constraints)
-    language_model = LanguageModel(
-        "distilbert-base-uncased"
-    )  # Using a smaller model for faster execution
-    agent = EnhancedPPOAgent(
-        state_size=768, action_size=1000, language_model=language_model
-    )
+    language_model = LanguageModel("distilbert-base-uncased")
+    agent = EnhancedPPOAgent(state_size=768, action_size=100, language_model=language_model)
 
-    num_episodes = 200
+    num_episodes = 5
     max_steps_per_episode = 50
     for episode in range(num_episodes):
         state = env.reset()
@@ -270,7 +279,6 @@ def main():
             f"Episode {episode}/{num_episodes}, Reward: {episode_reward:.2f}, Steps: {step}"
         )
 
-        # Early stopping condition
         if episode > 10 and episode_reward > 5:
             print("Early stopping condition met. Training complete.")
             break
