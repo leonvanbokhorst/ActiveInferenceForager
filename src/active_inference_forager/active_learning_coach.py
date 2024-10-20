@@ -66,8 +66,6 @@ class EnhancedConversationState:
         self.api_cooldown = 1
         self.belief_state: Dict[str, float] = {}
         self.previous_precision = 1.0
-
-        # Initialize user_state with the required fields
         self.user_state = {
             "topic": "",
             "understanding_level": 0.5,  # between 0 and 1
@@ -102,10 +100,6 @@ class EnhancedConversationState:
 
     def get_belief_state_summary(self) -> str:
         return ", ".join([f"{k}: {v:.2f}" for k, v in self.belief_state.items()])
-
-
-# Enhanced decision-making using Expected Free Energy, precision modulation, and novelty bonus
-
 
 def generative_model(user_state: Dict, action: str) -> float:
     base_improvement = 0
