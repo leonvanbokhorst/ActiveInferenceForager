@@ -65,6 +65,14 @@ class EnhancedConversationState:
         self.last_api_call_time = 0
         self.api_cooldown = 1
         self.belief_state: Dict[str, float] = {}
+        self.previous_precision = 1.0
+
+        # Initialize user_state with the required fields
+        self.user_state = {
+            "topic": "",
+            "understanding_level": 0.5,  # between 0 and 1
+            "engagement": 0.8,  # between 0 and 1
+        }
 
     def update_state(self, user_input: str, system_response: str):
         self.conversation_history.append(
@@ -84,18 +92,69 @@ class EnhancedConversationState:
             self.confidence_level = (self.confidence_level + similarity) / 2
 
     def update_belief_state(self, user_input: str, system_response: str):
-        # Simple keyword-based belief updating
         keywords = ["confused", "understand", "clear", "difficult"]
         for keyword in keywords:
             if keyword in user_input.lower():
                 self.belief_state[keyword] = self.belief_state.get(keyword, 0) + 1
 
-        # Update based on inferred goals
         for goal in self.inferred_goals:
             self.belief_state[goal] = self.belief_state.get(goal, 0) + 0.5
 
     def get_belief_state_summary(self) -> str:
         return ", ".join([f"{k}: {v:.2f}" for k, v in self.belief_state.items()])
+
+
+# Enhanced decision-making using Expected Free Energy, precision modulation, and novelty bonus
+
+
+def generative_model(user_state: Dict, action: str) -> float:
+    base_improvement = 0
+    if action == "explain concept":
+        base_improvement = 0.2
+    elif action == "provide example":
+        base_improvement = 0.1
+    elif action == "ask question":
+        base_improvement = 0.15
+
+    uncertainty = np.random.normal(0, 0.05)
+    return user_state["understanding_level"] + base_improvement + uncertainty
+
+
+def precision_modulation(
+    predicted: float, actual: float, previous_precision: float
+) -> float:
+    error = abs(predicted - actual)
+    new_precision = 1 / (error + 0.1)
+    return 0.8 * previous_precision + 0.2 * new_precision
+
+
+def expected_free_energy(
+    user_state: Dict, action: str, precision: float = 1.0
+) -> float:
+    epistemic_value = 1.0 if action == "ask question" else 0.5
+    predicted_understanding = generative_model(user_state, action)
+    pragmatic_value = (
+        predicted_understanding - user_state["understanding_level"]
+    ) * precision
+    novelty_bonus = np.random.uniform(0.0, 0.1) if action == "recommend resource" else 0
+    beta = 0.5
+    G = pragmatic_value + beta * epistemic_value + novelty_bonus
+    return G
+
+
+def select_action(
+    user_state: Dict, coach_actions: List[str], precision: float = 1.0
+) -> str:
+    best_action = None
+    max_G = float("-inf")
+
+    for action in coach_actions:
+        G = expected_free_energy(user_state, action, precision)
+        if G > max_G:
+            max_G = G
+            best_action = action
+
+    return best_action
 
 
 def generate_system_response(prompt: str) -> str:
@@ -106,7 +165,7 @@ def generate_system_response(prompt: str) -> str:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an intelligent Active Learning Coach, designed to help users learn and understand various topics through adaptive, personalized instruction. Use the provided context to inform your responses, avoid repetitive questions, and provide information along with your questions. If the user seems confused, acknowledge it and try a different approach. Summarize the discussion occasionally to ensure alignment with the user's goals.",
+                    "content": "You are an intelligent Active Learning Coach, designed to help users learn and understand various topics...",
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -184,6 +243,12 @@ def main_interaction_loop():
     )
 
     interaction_count = 0
+    coach_actions = [
+        "explain concept",
+        "provide example",
+        "ask question",
+        "recommend resource",
+    ]
 
     while True:
         user_input = input("You: ")
@@ -191,17 +256,42 @@ def main_interaction_loop():
             print("Thank you for learning with me today! Goodbye!")
             break
 
+        # Generate a prediction using the generative model
+        predicted = generative_model(state.user_state, "ask question")
+
+        # Simulate an actual outcome based on user feedback (for illustration)
+        actual = predicted + np.random.normal(0, 0.05)
+
+        # Update precision based on prediction error
+        state.previous_precision = precision_modulation(
+            predicted, actual, state.previous_precision
+        )
+
+        # Select the action with the highest Expected Free Energy
+        action = select_action(
+            state.user_state, coach_actions, state.previous_precision
+        )
+
+        # Generate a response using OpenAI's GPT
         response = process_user_input(user_input, state)
         goals, coach_response = response.split("Response:", 1)
+
+        # Update inferred goals and the current topic
         state.inferred_goals = goals.replace("Goals:", "").strip().split(", ")
         state.current_topic = (
             state.inferred_goals[0] if state.inferred_goals else state.current_topic
         )
         interaction_count += 1
+
+        # Print the coach's response
         print(
             f"---\nInteraction {interaction_count}\n---\nCoach: {coach_response.strip()}"
         )
+
+        # Update the state with the user's input and the coach's response
         state.update_state(user_input, coach_response.strip())
+
+        # Display current confidence, goals, and belief state
         print(f"---\nCurrent confidence level: {state.confidence_level:.2f}")
         print(f"Inferred goals: {state.inferred_goals}")
         print(f"Belief state: {state.get_belief_state_summary()}")
