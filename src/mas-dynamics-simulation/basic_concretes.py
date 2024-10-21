@@ -3,46 +3,59 @@ from typing import List, Dict, Any
 from abc import ABC, abstractmethod
 
 # Assuming these are defined elsewhere
-from abstract_classes import AbstractEnvironment, AbstractAgent, AbstractDecisionEngine, WorldView, Goal
+from abstract_classes import (
+    AbstractEnvironment,
+    AbstractAgent,
+    AbstractDecisionEngine,
+    WorldView,
+    Goal,
+)
+
 
 class ConcreteEnvironment(AbstractEnvironment):
     def __init__(self, size: int):
         self.size = size
         self.time = 0
-        self.resources = {(x, y): random.randint(0, 100) for x in range(size) for y in range(size)}
+        self.resources = {
+            (x, y): random.randint(0, 100) for x in range(size) for y in range(size)
+        }
         self.agents: Dict[str, ConcreteAgent] = {}
 
     def get_state(self) -> Dict[str, Any]:
         return {
-            'time': self.time,
-            'resources': self.resources,
-            'agents': {agent_id: agent.get_position() for agent_id, agent in self.agents.items()}
+            "time": self.time,
+            "resources": self.resources,
+            "agents": {
+                agent_id: agent.get_position()
+                for agent_id, agent in self.agents.items()
+            },
         }
 
-    def apply_action(self, action: str, agent: 'ConcreteAgent'):
-        if action == 'move':
+    def apply_action(self, action: str, agent: "ConcreteAgent"):
+        if action == "move":
             new_pos = self._get_random_adjacent_position(agent.get_position())
             agent.set_position(new_pos)
-        elif action == 'gather':
+        elif action == "gather":
             resources = self.resources.get(agent.get_position(), 0)
             gathered = min(resources, agent.gather_capacity)
             self.resources[agent.get_position()] -= gathered
             agent.resources += gathered
 
     def generate_event(self) -> str:
-        events = ['rain', 'sunshine', 'drought', 'abundance']
+        events = ["rain", "sunshine", "drought", "abundance"]
         return random.choice(events)
 
     def advance_time(self, time_step: int):
         self.time += time_step
 
     def update(self, world_view: WorldView):
-        world_view.update_knowledge('environment_state', self.get_state())
+        world_view.update_knowledge("environment_state", self.get_state())
 
     def _get_random_adjacent_position(self, position: tuple) -> tuple:
         x, y = position
         dx, dy = random.choice([(0, 1), (1, 0), (0, -1), (-1, 0)])
         return ((x + dx) % self.size, (y + dy) % self.size)
+
 
 class ConcreteAgent(AbstractAgent):
     def __init__(self, agent_id: str, world_view: WorldView, position: tuple):
@@ -54,9 +67,9 @@ class ConcreteAgent(AbstractAgent):
 
     def perceive_environment(self, environment: ConcreteEnvironment):
         visible_area = self._get_visible_area(environment)
-        self.world_view.update_knowledge('visible_area', visible_area)
+        self.world_view.update_knowledge("visible_area", visible_area)
 
-    def update_mental_model(self, agent: 'ConcreteAgent', interaction: str):
+    def update_mental_model(self, agent: "ConcreteAgent", interaction: str):
         if agent.agent_id not in self.mental_models:
             self.mental_models[agent.agent_id] = AgentModel(agent.agent_id)
         self.mental_models[agent.agent_id].update_model(interaction)
@@ -80,9 +93,10 @@ class ConcreteAgent(AbstractAgent):
         # Simplified emotional state update
         pass
 
-    def evaluate_relationship(self, other_agent: 'ConcreteAgent') -> float:
+    def evaluate_relationship(self, other_agent: "ConcreteAgent") -> float:
         # Simplified relationship evaluation
         return random.random()
+
 
 class ConcreteDecisionEngine(AbstractDecisionEngine):
     def make_decision(self, agent: ConcreteAgent, options: List[Any]) -> Any:
@@ -90,31 +104,39 @@ class ConcreteDecisionEngine(AbstractDecisionEngine):
         return max(options, key=lambda option: self.evaluate_option(agent, option))
 
     def evaluate_option(self, agent: ConcreteAgent, option: Any) -> float:
-        if option == 'move':
+        if option == "move":
             return 0.5  # Base utility for moving
-        elif option == 'gather':
-            visible_area = agent.world_view.get_knowledge('visible_area')
+        elif option == "gather":
+            visible_area = agent.world_view.get_knowledge("visible_area")
             resources_at_position = visible_area.get(agent.get_position(), 0)
-            return min(resources_at_position, agent.gather_capacity) / agent.gather_capacity
+            return (
+                min(resources_at_position, agent.gather_capacity)
+                / agent.gather_capacity
+            )
         return 0  # Default utility for unknown options
 
     def prioritize_goals(self, agent: ConcreteAgent, goals: List[Goal]) -> List[Goal]:
         # Simple prioritization: sort goals by their priority attribute
         return sorted(goals, key=lambda g: g.priority, reverse=True)
 
+
 # Example usage
 if __name__ == "__main__":
     world_view = WorldView({})
-    environment = ConcreteEnvironment(size=100)
+    environment = ConcreteEnvironment(size=25)
     agent = ConcreteAgent("Agent1", world_view, position=(0, 0))
+    agent2 = ConcreteAgent("Agent2", world_view, position=(5, 21))
     environment.agents[agent.agent_id] = agent
+    environment.agents[agent2.agent_id] = agent2
 
-    for _ in range(50):  # Simulate 5 steps
+    for _ in range(5):  # Simulate 5 steps
         agent.perceive_environment(environment)
-        options = ['move', 'gather']
+        options = ["move", "gather"]
         action = agent.make_decision(options)
         environment.apply_action(action, agent)
         environment.advance_time(1)
-        print(f"Step {environment.time}: Agent at {agent.get_position()} with {agent.resources} resources")
+        print(
+            f"Step {environment.time}: Agent at {agent.get_position()} with {agent.resources} resources"
+        )
 
     print("Final environment state:", environment.get_state())
