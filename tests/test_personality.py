@@ -115,12 +115,11 @@ def test_big_five_personality_str_representation():
     assert "Neuroticism: 30.0% - Low" in str_rep
 
 def test_big_five_personality_get_level_description():
-    personality = BigFivePersonality()
-    assert personality._get_level_description("Test", 0.1) == "Very Low"
-    assert personality._get_level_description("Test", 0.3) == "Low"
-    assert personality._get_level_description("Test", 0.5) == "Moderate"
-    assert personality._get_level_description("Test", 0.7) == "High"
-    assert personality._get_level_description("Test", 0.9) == "Very High"
+    assert BigFivePersonality._get_level_description(0.1) == "Very Low"
+    assert BigFivePersonality._get_level_description(0.3) == "Low"
+    assert BigFivePersonality._get_level_description(0.5) == "Moderate"
+    assert BigFivePersonality._get_level_description(0.7) == "High"
+    assert BigFivePersonality._get_level_description(0.9) == "Very High"
 
 def test_big_five_personality_generate_realistic_value():
     np.random.seed(42)  # Set seed for reproducibility
@@ -237,3 +236,4 @@ def test_big_five_personality_similarity_description_all_levels():
     
     quite_different = BigFivePersonality({"openness": 0.9, "conscientiousness": 0.1, "extraversion": 0.1, "agreeableness": 0.9, "neuroticism": 0.1})
     assert "quite different" in base.similarity_description(quite_different, "Other")
+

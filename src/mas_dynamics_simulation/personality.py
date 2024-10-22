@@ -167,6 +167,14 @@ class BigFivePersonality(Personality):
     STD_DEV_NARROW = 0.12
     STD_DEV_NORMAL = 0.15
 
+    LEVEL_DESCRIPTIONS = {
+        (0.0, 0.2): "Very Low",
+        (0.2, 0.4): "Low",
+        (0.4, 0.6): "Moderate",
+        (0.6, 0.8): "High",
+        (0.8, 1.0): "Very High"
+    }
+
     def __init__(self, traits: Dict[str, Union[float, PersonalityTrait]] = None):
         self._traits = {
             "openness": Openness(),
@@ -188,24 +196,16 @@ class BigFivePersonality(Personality):
         if not isinstance(other, BigFivePersonality):
             raise ValueError("Can only compare with another BigFivePersonality")
             
-        vec1 = np.array([trait.value for trait in self.traits.values()])
-        vec2 = np.array([trait.value for trait in other.traits.values()])
+        vec1 = np.fromiter((trait.value for trait in self.traits.values()), dtype=float)
+        vec2 = np.fromiter((trait.value for trait in other.traits.values()), dtype=float)
         
-        # Calculate Euclidean distance
         distance = np.linalg.norm(vec1 - vec2)
-        
-        # Normalize the distance to a similarity score
-        # The maximum possible distance is sqrt(5) (5 traits, each can differ by 1)
         max_distance = np.sqrt(5)
         similarity = 1 - (distance / max_distance)
         
         return similarity
 
     def compare(self, other: "BigFivePersonality", other_name: str) -> str:
-        """
-        Generates a natural language comparison between this personality and another.
-        The comparison is from the perspective of self compared to other.
-        """
         if not isinstance(other, BigFivePersonality):
             raise ValueError("Can only compare with another BigFivePersonality")
 
@@ -215,73 +215,59 @@ class BigFivePersonality(Personality):
             "conscientiousness": "conscientious",
             "extraversion": "extraverted",
             "agreeableness": "agreeable",
-            "neuroticism": "emotionally stable"  # Changed this
+            "neuroticism": "emotionally stable"
         }
         
         THRESHOLD = 0.1
         
-        for trait_name in self.traits:
-            diff = self.traits[trait_name].value - other.traits[trait_name].value
+        for trait_name, trait in self.traits.items():
+            diff = trait.value - other.traits[trait_name].value
             if trait_name == "neuroticism":
-                diff = -diff  # Invert the difference for neuroticism
+                diff = -diff
             if abs(diff) >= THRESHOLD:
-                differences.append({
-                    'trait': trait_adjectives[trait_name],
-                    'diff': diff
-                })
+                differences.append((trait_adjectives[trait_name], diff))
         
         if not differences:
             return f"You have a very similar personality to {other_name}."
         
-        differences.sort(key=lambda x: abs(x['diff']), reverse=True)
+        differences.sort(key=lambda x: abs(x[1]), reverse=True)
         
-        more_traits = [d['trait'] for d in differences if d['diff'] > 0]
-        less_traits = [d['trait'] for d in differences if d['diff'] < 0]
+        more_traits = [trait for trait, diff in differences if diff > 0]
+        less_traits = [trait for trait, diff in differences if diff < 0]
         
         parts = []
         
-        if more_traits:
-            if len(more_traits) == 1:
-                parts.append(f"more {more_traits[0]}")
-            elif len(more_traits) == 2:
-                parts.append(f"more {more_traits[0]} and {more_traits[1]}")
-            else:
-                traits_str = ", ".join(more_traits[:-1]) + f", and {more_traits[-1]}"
-                parts.append(f"more {traits_str}")
-        
-        if less_traits:
-            if len(less_traits) == 1:
-                parts.append(f"less {less_traits[0]}")
-            elif len(less_traits) == 2:
-                parts.append(f"less {less_traits[0]} and {less_traits[1]}")
-            else:
-                traits_str = ", ".join(less_traits[:-1]) + f", and {less_traits[-1]}"
-                parts.append(f"less {traits_str}")
+        for traits, prefix in [(more_traits, "more"), (less_traits, "less")]:
+            if traits:
+                if len(traits) == 1:
+                    parts.append(f"{prefix} {traits[0]}")
+                elif len(traits) == 2:
+                    parts.append(f"{prefix} {traits[0]} and {traits[1]}")
+                else:
+                    traits_str = ", ".join(traits[:-1]) + f", and {traits[-1]}"
+                    parts.append(f"{prefix} {traits_str}")
         
         return f"You are {' but '.join(parts)} than {other_name}."
 
     def __str__(self) -> str:
-        """Returns a formatted string showing all personality traits and their values."""
-        traits_str = []
-        for trait in self.traits.values():
-            percentage = trait.value * 100
-            level = self._get_level_description(trait.name, trait.value)
-            traits_str.append(f"{trait.name}: {percentage:.1f}% - {level}")
-        
-        return "\n".join(traits_str)
+        return "\n".join(
+            f"{trait.name}: {trait.value*100:.1f}% - {self._get_level_description(trait.value)}"
+            for trait in self.traits.values()
+        )
 
-    def _get_level_description(self, trait_name: str, value: float) -> str:
-        """Returns a descriptive label for the trait level."""
-        if value < 0.2:
-            return "Very Low"
-        elif value < 0.4:
-            return "Low"
-        elif value < 0.6:
-            return "Moderate"
-        elif value < 0.8:
-            return "High"
-        else:
-            return "Very High"
+    @classmethod
+    def _get_level_description(cls, value: float) -> str:
+        LEVEL_DESCRIPTIONS = {
+            (0.0, 0.2): "Very Low",
+            (0.2, 0.4): "Low",
+            (0.4, 0.6): "Moderate",
+            (0.6, 0.8): "High",
+            (0.8, 1.0): "Very High"
+        }
+        for (lower, upper), description in LEVEL_DESCRIPTIONS.items():
+            if lower <= value < upper:
+                return description
+        return LEVEL_DESCRIPTIONS[(0.8, 1.0)]  # Default to "Very High" for edge case
 
     @staticmethod
     def _generate_realistic_value(mean: float, std_dev: float, volatility: float = 0.1) -> float:
@@ -401,6 +387,9 @@ class BigFivePersonality(Personality):
             description = "very different"
 
         return f"You and {other_name} have {description} personalities."
+
+
+
 
 
 
