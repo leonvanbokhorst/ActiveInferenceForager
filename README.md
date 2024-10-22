@@ -2,32 +2,202 @@
 
 [![CodeQL](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/github-code-scanning/codeql) [![Run Tests](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/run-tests.yml/badge.svg)](https://github.com/leonvanbokhorst/ActiveInferenceForager/actions/workflows/run-tests.yml)
 
-This project aims to implement an intelligent chat agent using principles from Active Inference, a neuroscientific theory of brain function and decision-making. We've enhanced our existing Deep Q-Network (DQN) agent with elements of Active Inference, specifically focusing on free energy minimization.
+ActiveInferenceForager is an open-source action research project that implements an intelligent agent using principles from Active Inference, a neuroscientific theory of brain function and decision-making. This project aims to bridge the gap between theoretical neuroscience and practical AI applications, creating adaptive agents capable of learning and making decisions in complex, dynamic environments.
 
-## What is the Free Energy Principle?
+## Table of Contents
 
-The Free Energy Principle is a theory that explains how living systems, like humans and animals, maintain themselves and adapt to their environment by minimizing "free energy." In simple terms, it's about how organisms, from the brain to single cells, try to stay in a predictable, stable state by reducing uncertainty or "surprise" about the world around them.
+- [ActiveInferenceForager](#activeinferenceforager)
+  - [Table of Contents](#table-of-contents)
+  - [Project Overview](#project-overview)
+  - [Key Components](#key-components)
+  - [Multi-Agent System (MAS) Dynamics Simulation](#multi-agent-system-mas-dynamics-simulation)
+  - [Proofs of Concept (POCs)](#proofs-of-concept-pocs)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Contributing](#contributing)
+  - [License](#license)
 
-At its core, the Free Energy Principle says that all living things have a basic goal: to avoid states that could harm them or make them less likely to survive. They do this by continuously making predictions about their environment and comparing these predictions with what they actually sense (through sight, sound, touch, etc.). When there's a mismatch—when the world surprises us—our brain (or even simpler systems in the body) works to correct that, either by updating our beliefs (what we think is happening) or by acting to change the situation to match our expectations.
+## Project Overview
 
-## What is Active Inference?
+ActiveInferenceForager implements an intelligent chat agent using principles from Active Inference, focusing on free energy minimization. The project includes:
 
-Active Inference is a way of explaining how living things, like humans and animals, interact with the world by constantly updating their understanding of it and acting to reduce uncertainty. Think of it as a process where your brain makes guesses about what's going on around you and then adjusts those guesses based on what it senses.
+- A core implementation of Active Inference algorithms
+- A Multi-Agent System (MAS) dynamics simulation framework
+- Several proofs of concept demonstrating key concepts
+- A flexible and extensible architecture for further research and development
 
-> Active Inference Q&A section: [docs/active-inference-qa.md](docs/active-inference-qa.md)
+For a detailed explanation of the Free Energy Principle and Active Inference, please refer to our [Active Inference Q&A](docs/active-inference-qa.md).
 
-## Recent Updates: Improved Prompting Structure
+## Key Components
 
-We've recently updated our project to use a more sophisticated prompting structure for our language models. This new structure separates the system prompt from the user prompt, allowing for more flexible and context-aware responses.
+1. LLM Proactive Agent: An advanced chatbot implementing Active Inference principles.
 
-### Key Changes:
+   ```python:src/active_inference_forager/llm_proactive_agent.py
+   startLine: 1
+   endLine: 218
+   ```
 
-1. **Separate System and User Prompts**: We now use distinct prompts for system instructions and user inputs. This allows for better control over the AI's persona and behavior.
+2. Goal Seeker: Manages the agent's goals and decision-making process.
 
-2. **Enhanced LLM Providers**: Our LLM providers (OpenAI and HuggingFace) have been updated to support this new prompting structure, ensuring consistency across different models.
+   ```python:src/active_inference_forager/managers/goal_seeker.py
+   startLine: 1
+   endLine: 228
+   ```
 
-3. **Improved Response Generation**: Both the RapportBuilder and GoalSeeker classes now generate responses using this new structure, leading to more contextually appropriate and tailored responses.
+3. Rapport Builder: Handles user interaction and relationship building.
 
-These changes allow our AI agent to better understand the context of each interaction and provide more accurate and helpful responses.
+   ```python:src/active_inference_forager/managers/rapport_builder.py
+   startLine: 1
+   endLine: 26
+   ```
 
-For developers looking to contribute or understand the codebase, please refer to the updated classes in the `src/active_inference_forager/managers/` and `src/active_inference_forager/providers/` directories.
+4. OpenAI Provider: Integrates with OpenAI's language models for natural language processing.
+
+   ```python:src/active_inference_forager/providers/openai_provider.py
+   startLine: 1
+   endLine: 57
+   ```
+
+## Multi-Agent System (MAS) Dynamics Simulation
+
+The MAS dynamics simulation framework allows for modeling complex interactions between multiple agents in various environments. Key components include:
+
+1. Agent: Abstract base class for implementing various types of agents.
+
+   ```python:src/mas_dynamics_simulation/agent.py
+   startLine: 1
+   endLine: 147
+   ```
+
+2. Environment: Represents the world in which agents operate.
+
+   ```python:src/mas_dynamics_simulation/environment.py
+   startLine: 1
+   endLine: 84
+   ```
+
+3. Personality: Implements the Big Five personality model for agents.
+
+   ```python:src/mas_dynamics_simulation/personality.py
+   startLine: 1
+   endLine: 158
+   ```
+
+4. Decision Making: Handles agent decision-making processes.
+
+   ```python:src/mas_dynamics_simulation/decision_making.py
+   startLine: 1
+   endLine: 98
+   ```
+
+## Proofs of Concept (POCs)
+
+The project includes several POCs demonstrating key concepts:
+
+1. Variational Free Energy Minimization:
+
+   ```python:src/poc/variational_free_energy.py
+   startLine: 1
+   endLine: 26
+   ```
+
+2. Prediction Error Propagation:
+
+   ```python:src/poc/prediction_error_propagation.py
+   startLine: 1
+   endLine: 89
+   ```
+
+3. VFE Minimization:
+
+   ```python:src/poc/vfe_minimization.py
+   startLine: 1
+   endLine: 50
+   ```
+
+These POCs provide practical implementations of core Active Inference concepts and serve as building blocks for more complex agent behaviors.
+
+## Installation
+
+To set up the ActiveInferenceForager project, follow these steps:
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/yourusername/ActiveInferenceForager.git
+   cd ActiveInferenceForager
+   ```
+
+2. Create a virtual environment:
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+   ```
+
+3. Install the required dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Install the project in editable mode:
+
+   ```bash
+   pip install -e .
+   ```
+
+## Usage
+
+To use the ActiveInferenceForager project, follow these steps:
+
+1. Ensure you have completed the installation process described above.
+
+2. Set up your OpenAI API key:
+
+   ```bash
+   export OPENAI_API_KEY=your_api_key_here
+   ```
+
+3. Run the main application:
+
+   ```bash
+   python src/main.py
+   ```
+
+4. To run specific proofs of concept:
+
+   ```bash
+   python src/poc/variational_free_energy.py
+   python src/poc/prediction_error_propagation.py
+   python src/poc/vfe_minimization.py
+   ```
+
+5. To run the Multi-Agent System simulation:
+
+   ```bash
+   python src/mas_dynamics_simulation/simulation.py
+   ```
+
+For more detailed usage instructions and examples, please refer to the documentation in the `docs` folder.
+
+## Contributing
+
+We welcome contributions to the ActiveInferenceForager project! Here's how you can contribute:
+
+1. Fork the repository on GitHub.
+2. Create a new branch for your feature or bug fix.
+3. Write your code and add tests if applicable.
+4. Ensure all tests pass by running:
+
+   ```bash
+   pytest
+   ```
+
+5. Submit a pull request with a clear description of your changes.
+
+Please make sure to follow our coding standards and commit message conventions. For major changes, please open an issue first to discuss what you would like to change.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
