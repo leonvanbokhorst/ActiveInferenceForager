@@ -99,21 +99,3 @@ class SystemWideAnalyzer(ABC):
         """
         pass
 
-
-class Environment(ABC):
-    """
-    Represents the environment in which agents interact.
-    """
-
-    @abstractmethod
-    def __str__(self) -> str:
-        """
-        Returns a string representation of the Environment.
-
-        This method should be implemented by subclasses to provide a meaningful
-        string representation of the Environment's current state.
-
-        Returns:
-            str: A string representation of the Environment.
-        """
-        pass

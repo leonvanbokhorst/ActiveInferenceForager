@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Union
@@ -122,7 +123,11 @@ class BigFivePersonalityTrait(PersonalityTrait):
     def __eq__(self, other):
         if not isinstance(other, BigFivePersonalityTrait):
             return NotImplemented
-        return self.name == other.name and self.value == other.value and self.explanation == other.explanation
+        return (
+            self.name == other.name
+            and self.value == other.value
+            and self.explanation == other.explanation
+        )
 
     def __hash__(self):
         return hash((self.name, self.value, self.explanation))
@@ -148,7 +153,9 @@ class Extraversion(BigFivePersonalityTrait):
 
 class Agreeableness(BigFivePersonalityTrait):
     def __init__(self):
-        explanation = "Tendency to be compassionate, cooperative, and trusting towards others."
+        explanation = (
+            "Tendency to be compassionate, cooperative, and trusting towards others."
+        )
         super().__init__("Agreeableness", explanation=explanation)
 
 
@@ -167,18 +174,28 @@ class BigFivePersonality(Personality):
     STD_DEV_NARROW = 0.12
     STD_DEV_NORMAL = 0.15
 
+    LEVEL_DESCRIPTIONS = {
+        (0.0, 0.2): "Very Low",
+        (0.2, 0.4): "Low",
+        (0.4, 0.6): "Moderate",
+        (0.6, 0.8): "High",
+        (0.8, 1.0): "Very High",
+    }
+
     def __init__(self, traits: Dict[str, Union[float, PersonalityTrait]] = None):
         self._traits = {
             "openness": Openness(),
             "conscientiousness": Conscientiousness(),
             "extraversion": Extraversion(),
             "agreeableness": Agreeableness(),
-            "neuroticism": Neuroticism()
+            "neuroticism": Neuroticism(),
         }
-        
+
         if traits:
             for trait_name, value in traits.items():
                 self[trait_name.lower()] = value
+
+        self.logger = logging.getLogger(__name__)
 
     @property
     def traits(self) -> Dict[str, BigFivePersonalityTrait]:
@@ -187,25 +204,19 @@ class BigFivePersonality(Personality):
     def similarity(self, other: "BigFivePersonality") -> float:
         if not isinstance(other, BigFivePersonality):
             raise ValueError("Can only compare with another BigFivePersonality")
-            
-        vec1 = np.array([trait.value for trait in self.traits.values()])
-        vec2 = np.array([trait.value for trait in other.traits.values()])
-        
-        # Calculate Euclidean distance
+
+        vec1 = np.fromiter((trait.value for trait in self.traits.values()), dtype=float)
+        vec2 = np.fromiter(
+            (trait.value for trait in other.traits.values()), dtype=float
+        )
+
         distance = np.linalg.norm(vec1 - vec2)
-        
-        # Normalize the distance to a similarity score
-        # The maximum possible distance is sqrt(5) (5 traits, each can differ by 1)
         max_distance = np.sqrt(5)
         similarity = 1 - (distance / max_distance)
-        
+
         return similarity
 
     def compare(self, other: "BigFivePersonality", other_name: str) -> str:
-        """
-        Generates a natural language comparison between this personality and another.
-        The comparison is from the perspective of self compared to other.
-        """
         if not isinstance(other, BigFivePersonality):
             raise ValueError("Can only compare with another BigFivePersonality")
 
@@ -215,80 +226,68 @@ class BigFivePersonality(Personality):
             "conscientiousness": "conscientious",
             "extraversion": "extraverted",
             "agreeableness": "agreeable",
-            "neuroticism": "emotionally stable"  # Changed this
+            "neuroticism": "emotionally stable",
         }
-        
+
         THRESHOLD = 0.1
-        
-        for trait_name in self.traits:
-            diff = self.traits[trait_name].value - other.traits[trait_name].value
+
+        for trait_name, trait in self.traits.items():
+            diff = trait.value - other.traits[trait_name].value
             if trait_name == "neuroticism":
-                diff = -diff  # Invert the difference for neuroticism
+                diff = -diff
             if abs(diff) >= THRESHOLD:
-                differences.append({
-                    'trait': trait_adjectives[trait_name],
-                    'diff': diff
-                })
-        
+                differences.append((trait_adjectives[trait_name], diff))
+
         if not differences:
             return f"You have a very similar personality to {other_name}."
-        
-        differences.sort(key=lambda x: abs(x['diff']), reverse=True)
-        
-        more_traits = [d['trait'] for d in differences if d['diff'] > 0]
-        less_traits = [d['trait'] for d in differences if d['diff'] < 0]
-        
+
+        differences.sort(key=lambda x: abs(x[1]), reverse=True)
+
+        more_traits = [trait for trait, diff in differences if diff > 0]
+        less_traits = [trait for trait, diff in differences if diff < 0]
+
         parts = []
-        
-        if more_traits:
-            if len(more_traits) == 1:
-                parts.append(f"more {more_traits[0]}")
-            elif len(more_traits) == 2:
-                parts.append(f"more {more_traits[0]} and {more_traits[1]}")
-            else:
-                traits_str = ", ".join(more_traits[:-1]) + f", and {more_traits[-1]}"
-                parts.append(f"more {traits_str}")
-        
-        if less_traits:
-            if len(less_traits) == 1:
-                parts.append(f"less {less_traits[0]}")
-            elif len(less_traits) == 2:
-                parts.append(f"less {less_traits[0]} and {less_traits[1]}")
-            else:
-                traits_str = ", ".join(less_traits[:-1]) + f", and {less_traits[-1]}"
-                parts.append(f"less {traits_str}")
-        
+
+        for traits, prefix in [(more_traits, "more"), (less_traits, "less")]:
+            if traits:
+                if len(traits) == 1:
+                    parts.append(f"{prefix} {traits[0]}")
+                elif len(traits) == 2:
+                    parts.append(f"{prefix} {traits[0]} and {traits[1]}")
+                else:
+                    traits_str = ", ".join(traits[:-1]) + f", and {traits[-1]}"
+                    parts.append(f"{prefix} {traits_str}")
+
         return f"You are {' but '.join(parts)} than {other_name}."
 
     def __str__(self) -> str:
-        """Returns a formatted string showing all personality traits and their values."""
-        traits_str = []
-        for trait in self.traits.values():
-            percentage = trait.value * 100
-            level = self._get_level_description(trait.name, trait.value)
-            traits_str.append(f"{trait.name}: {percentage:.1f}% - {level}")
-        
-        return "\n".join(traits_str)
+        return ", ".join(
+            f"{self._get_level_description(trait.value).lower()} {trait.name.lower()} ({trait.value*100:.0f}%)"
+            for trait in self.traits.values()
+        )
 
-    def _get_level_description(self, trait_name: str, value: float) -> str:
-        """Returns a descriptive label for the trait level."""
-        if value < 0.2:
-            return "Very Low"
-        elif value < 0.4:
-            return "Low"
-        elif value < 0.6:
-            return "Moderate"
-        elif value < 0.8:
-            return "High"
-        else:
-            return "Very High"
+    @classmethod
+    def _get_level_description(cls, value: float) -> str:
+        LEVEL_DESCRIPTIONS = {
+            (0.0, 0.2): "Very Low",
+            (0.2, 0.4): "Low",
+            (0.4, 0.6): "Moderate",
+            (0.6, 0.8): "High",
+            (0.8, 1.0): "Very High",
+        }
+        for (lower, upper), description in LEVEL_DESCRIPTIONS.items():
+            if lower <= value < upper:
+                return description
+        return LEVEL_DESCRIPTIONS[(0.8, 1.0)]  # Default to "Very High" for edge case
 
     @staticmethod
-    def _generate_realistic_value(mean: float, std_dev: float, volatility: float = 0.1) -> float:
+    def _generate_realistic_value(
+        mean: float, std_dev: float, volatility: float = 0.1
+    ) -> float:
         """
         Generate a realistic personality trait value using a normal distribution,
         with added random fluctuation.
-        
+
         Args:
             mean: The center point for the trait value
             std_dev: The standard deviation for the normal distribution
@@ -296,20 +295,22 @@ class BigFivePersonality(Personality):
         """
         adjusted_mean = mean + np.random.uniform(-volatility, volatility)
         adjusted_mean = max(0.1, min(0.9, adjusted_mean))
-        
+
         if np.random.random() < 0.15:  # 15% chance of more extreme value
             std_dev *= 1.5
-        
+
         while True:
             value = np.random.normal(adjusted_mean, std_dev)
             if 0.0 <= value <= 1.0:
                 return value
-            
+
     @classmethod
-    def random(cls, variation: str = "balanced", volatility: float = 0.1) -> "BigFivePersonality":
+    def random(
+        cls, variation: str = "balanced", volatility: float = 0.1
+    ) -> "BigFivePersonality":
         """
         Creates a personality with realistic but varying trait values.
-        
+
         Args:
             variation (str): The type of personality to generate:
                 - "balanced": Traits centered around the middle with natural variation
@@ -318,7 +319,7 @@ class BigFivePersonality(Personality):
                 - "analytical": Generally higher conscientiousness and openness
                 - "random": Completely randomized but still realistic traits
             volatility (float): How much the traits can deviate from their typical values (0.0-1.0)
-        
+
         Returns:
             BigFivePersonality: A new personality instance
         """
@@ -327,64 +328,79 @@ class BigFivePersonality(Personality):
             "conscientiousness": (0.5, cls.STD_DEV_NORMAL),
             "extraversion": (0.5, cls.STD_DEV_NORMAL),
             "agreeableness": (0.5, cls.STD_DEV_NORMAL),
-            "neuroticism": (0.5, cls.STD_DEV_NORMAL)
+            "neuroticism": (0.5, cls.STD_DEV_NORMAL),
         }
-        
+
         if variation == "random":
             trait_params = {
                 trait: (np.random.uniform(0.3, 0.7), 0.2)
                 for trait in trait_params.keys()
             }
         elif variation == "gentle":
-            trait_params.update({
-                "agreeableness": (0.7, cls.STD_DEV_NARROW),
-                "conscientiousness": (0.65, cls.STD_DEV_NARROW),
-                "neuroticism": (0.35, cls.STD_DEV_NARROW),
-                "openness": (0.5, 0.2),
-                "extraversion": (0.5, 0.2)
-            })
+            trait_params.update(
+                {
+                    "agreeableness": (0.7, cls.STD_DEV_NARROW),
+                    "conscientiousness": (0.65, cls.STD_DEV_NARROW),
+                    "neuroticism": (0.35, cls.STD_DEV_NARROW),
+                    "openness": (0.5, 0.2),
+                    "extraversion": (0.5, 0.2),
+                }
+            )
         elif variation == "bold":
-            trait_params.update({
-                "extraversion": (0.65, cls.STD_DEV_NARROW),
-                "openness": (0.6, cls.STD_DEV_NARROW),
-                "neuroticism": (0.45, cls.STD_DEV_NORMAL),
-                "conscientiousness": (0.5, 0.2),
-                "agreeableness": (0.5, 0.2)
-            })
+            trait_params.update(
+                {
+                    "extraversion": (0.65, cls.STD_DEV_NARROW),
+                    "openness": (0.6, cls.STD_DEV_NARROW),
+                    "neuroticism": (0.45, cls.STD_DEV_NORMAL),
+                    "conscientiousness": (0.5, 0.2),
+                    "agreeableness": (0.5, 0.2),
+                }
+            )
         elif variation == "analytical":
-            trait_params.update({
-                "conscientiousness": (0.65, cls.STD_DEV_NARROW),
-                "openness": (0.6, cls.STD_DEV_NARROW),
-                "extraversion": (0.4, cls.STD_DEV_NARROW),
-                "agreeableness": (0.5, cls.STD_DEV_NORMAL),
-                "neuroticism": (0.5, cls.STD_DEV_NORMAL)
-            })
-        
+            trait_params.update(
+                {
+                    "conscientiousness": (0.65, cls.STD_DEV_NARROW),
+                    "openness": (0.6, cls.STD_DEV_NARROW),
+                    "extraversion": (0.4, cls.STD_DEV_NARROW),
+                    "agreeableness": (0.5, cls.STD_DEV_NORMAL),
+                    "neuroticism": (0.5, cls.STD_DEV_NORMAL),
+                }
+            )
+
         random_traits = {}
         for trait, (mean, std_dev) in trait_params.items():
             value = cls._generate_realistic_value(mean, std_dev, volatility)
             random_traits[trait] = value
-        
+            logging.debug(f"Generated {trait} value: {value:.2f}")
+
         if np.random.random() < 0.6:  # 60% chance of correlated traits
+            logging.info("Applying trait correlations")
             if random_traits["conscientiousness"] > 0.6:
                 random_traits["neuroticism"] = min(
                     random_traits["neuroticism"],
-                    cls._generate_realistic_value(0.4, 0.15, volatility)
+                    cls._generate_realistic_value(0.4, 0.15, volatility),
                 )
+                logging.debug(f"Adjusted neuroticism: {random_traits['neuroticism']:.2f}")
             if random_traits["extraversion"] > 0.6:
                 random_traits["openness"] = max(
                     random_traits["openness"],
-                    cls._generate_realistic_value(0.6, 0.15, volatility)
+                    cls._generate_realistic_value(0.6, 0.15, volatility),
                 )
+                logging.debug(f"Adjusted openness: {random_traits['openness']:.2f}")
             if random_traits["neuroticism"] > 0.7:
                 random_traits["extraversion"] = min(
                     random_traits["extraversion"],
-                    cls._generate_realistic_value(0.4, 0.15, volatility)
+                    cls._generate_realistic_value(0.4, 0.15, volatility),
                 )
-        
-        return cls(random_traits)
+                logging.debug(f"Adjusted extraversion: {random_traits['extraversion']:.2f}")
 
-    def similarity_description(self, other: "BigFivePersonality", other_name: str) -> str:
+        personality = cls(random_traits)
+        logging.info(f"Generated {variation} personality: {personality}")
+        return personality
+
+    def similarity_description(
+        self, other: "BigFivePersonality", other_name: str
+    ) -> str:
         similarity = self.similarity(other)
 
         if similarity >= 0.95:
@@ -403,15 +419,16 @@ class BigFivePersonality(Personality):
         return f"You and {other_name} have {description} personalities."
 
 
+class DefaultPersonality(Personality):
+    def __init__(self):
+        # Initialize with default values
+        pass
 
+    def __str__(self):
+        return "Default Personality"
 
-
-
-
-
-
-
-
-
+    def similarity(self, other: "Personality") -> float:
+        # Implement a basic similarity measure
+        return 0.5 if isinstance(other, DefaultPersonality) else 0.0
 
 
