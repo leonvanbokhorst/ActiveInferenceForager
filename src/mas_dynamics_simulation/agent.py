@@ -28,17 +28,18 @@ class Agent(ABC):
             personality: The personality of the agent.
         """
         self._language_model_handler = language_model_handler
-        details = self.generate_agent_details(expertise, decision_engine, language_model_handler)
+        details = self.generate_agent_details(expertise, decision_engine, language_model_handler, personality)
         self._name = details.get('name', 'Unknown Agent')
         self._backstory = details.get('backstory', 'No backstory available')
         self._bio = details.get('bio', 'No bio available')
+        self._dark_secret = details.get('dark_secret', 'No dark secret available')
         self._expertise = tuple(expertise)  # Make expertise immutable
         self._decision_engine = decision_engine
         self._personality = personality
         self._memory = []  # Initialize an empty memory
 
     @classmethod
-    def generate_agent_details(cls, expertise: List[str], decision_engine: "DecisionEngine", language_model_handler: LanguageModelHandler) -> Dict[str, str]:
+    def generate_agent_details(cls, expertise: List[str], decision_engine: "DecisionEngine", language_model_handler: LanguageModelHandler, personality: Personality) -> Dict[str, str]:
         """
         Generate agent details using the language model based on expertise and decision engine.
 
@@ -51,9 +52,18 @@ class Agent(ABC):
             Dict[str, str]: A dictionary containing the generated agent details.
         """
         prompt = f"""
-        Generate a name, backstory, and short bio for an AI agent with the following expertise: {', '.join(expertise)}.
-        Format the response as a JSON object with keys 'name', 'backstory', and 'bio'.
+        Given a researcher is a well-regarded expert in these fields: {', '.join(expertise)} 
+        Furthermore, they have the following Big Five personality traits: {personality}, and very distinct character traits.
+        
+        1. Generate a name: a long, academic or philosophical sounding name for the researcher.
+        2. Generate a backstory: from a third person perspective about the researcher's upbringing, education, career, culture, cities, countries, etc. text only.
+        3. Generate a bio: from a third person perspective, and without explicitly naming personality traits, openly brag about the researcher's current role, achievements, superpowers, passions, quilty pleasures, and interests. text only.
+        4. Generate a dark secret: a dark secret, awkward secret, or adversarial goal for the researcher. text only.
+        
+        Format the response ONLY as a JSON object with keys 'name', 'backstory', 'bio', 'dark_secret'. No other text or markdown formatting.
+        Example: {{"name": "Name text", "backstory": "Backstory text", "bio": "Bio text", "dark_secret": "Dark secret text"}}
         """
+        print(f"\nPrompt: {prompt}")
         response = language_model_handler.generate_text(prompt)
         try:
             import json
@@ -61,11 +71,8 @@ class Agent(ABC):
             return details
         except json.JSONDecodeError:
             # If JSON parsing fails, return a default dictionary
-            return {
-                'name': 'Default Agent',
-                'backstory': 'A mysterious agent with unknown origins.',
-                'bio': f'An AI agent specializing in {", ".join(expertise)}.'
-            }
+            print(f"\nResponse: {response}")
+            return {}
 
     @property
     def name(self) -> str:
@@ -90,6 +97,10 @@ class Agent(ABC):
     @property
     def personality(self) -> "Personality":
         return self._personality
+    
+    @property
+    def dark_secret(self) -> str:
+        return self._dark_secret
 
     @abstractmethod
     def perceive(self, environment: "Environment") -> Dict[str, Any]:

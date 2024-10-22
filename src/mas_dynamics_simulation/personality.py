@@ -258,8 +258,8 @@ class BigFivePersonality(Personality):
         return f"You are {' but '.join(parts)} than {other_name}."
 
     def __str__(self) -> str:
-        return "\n".join(
-            f"{trait.name}: {trait.value*100:.1f}% - {self._get_level_description(trait.value)}"
+        return ", ".join(
+            f"{self._get_level_description(trait.value).lower()} {trait.name.lower()}"
             for trait in self.traits.values()
         )
 
