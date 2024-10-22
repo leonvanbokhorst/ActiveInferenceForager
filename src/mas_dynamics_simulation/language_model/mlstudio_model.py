@@ -18,7 +18,7 @@ class MLStudioModel(LanguageModel):
         super().__init__(model_params)
         self.base_url = model_params['base_url']
         self.model_name = model_params['model_name']
-        self.api_key = model_params.get('api_key')
+        self.api_key = model_params.get('api_key') or "MLSTUDIO"
         self.headers = {
             "Content-Type": "application/json"
         }
