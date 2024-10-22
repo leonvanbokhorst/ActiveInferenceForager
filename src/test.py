@@ -4,7 +4,7 @@ import math
 
 from typing import Dict, Any, List
 from mas_dynamics_simulation.agent import Agent, Action
-from mas_dynamics_simulation.personality import Personality
+from mas_dynamics_simulation.personality import Personality, Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism, BigFivePersonalityTrait
 from mas_dynamics_simulation.decision_making import DecisionEngine
 from mas_dynamics_simulation.environment import Environment
 
@@ -38,7 +38,7 @@ class DoNothingAction(Action):
         return "DoNothing"
 
     def execute(self, agent: Agent, environment: Environment):
-        print(f"Agent {agent.name} is doing nothing.")
+        print(f"Agent {agent.name} is doing nothing at time {environment.current_time}.")
 
     def __str__(self) -> str:
         return "DoNothingAction()"
@@ -91,6 +91,30 @@ class SimpleSimulation:
             self.environment.update()
             self.environment.step()
             print(f"Environment state: {self.environment.get_state()}")
+        # Compare and print agents' personalities
+        print("\nComparing agent personalities:")
+        for i, agent1 in enumerate(self.agents):
+            for j, agent2 in enumerate(self.agents[i+1:], start=i+1):
+                similarity = agent1.personality.similarity(agent2.personality)
+                print(f"Similarity between {agent1.name} and {agent2.name}: {similarity:.2f}")
+        
+        print("\nAgent personalities:")
+        for agent in self.agents:
+            print(f"{agent.name}: {agent.personality}")
+            
+        print("\nAgent expertise:")
+        for agent in self.agents:
+            print(f"{agent.name}: {agent.expertise}")
+            
+        # Point out substantial differences in personality traits
+        print("\nSubstantial personality differences:")
+        for i, agent1 in enumerate(self.agents):
+            for j, agent2 in enumerate(self.agents[i+1:], start=i+1):
+                for trait in agent1.personality.traits:
+                    diff = abs(agent1.personality[trait].value - agent2.personality[trait].value)
+                    if diff >= 0.3:  # Consider a difference of 0.3 or more as substantial
+                        print(f"{agent1.name} vs {agent2.name} - {trait.capitalize()}: "
+                              f"{agent1.personality[trait].value:.2f} vs {agent2.personality[trait].value:.2f} (difference: {diff:.2f}) ")
 
 class SimpleDecisionEngine(DecisionEngine):
     def __init__(self):
@@ -112,17 +136,31 @@ class SimpleDecisionEngine(DecisionEngine):
 
 class SimplePersonality(Personality):
     def __init__(self, traits: Dict[str, float] = None):
-        traits = traits or {"openness": 0.5, "conscientiousness": 0.5, "extraversion": 0.5, "agreeableness": 0.5, "neuroticism": 0.5}
-        super().__init__(traits)
-        self.traits = traits
+        self._traits = {
+            "openness": Openness(),
+            "conscientiousness": Conscientiousness(),
+            "extraversion": Extraversion(),
+            "agreeableness": Agreeableness(),
+            "neuroticism": Neuroticism()
+        }
+        if traits:
+            for trait, value in traits.items():
+                self[trait.lower()] = value
+
+    @property
+    def traits(self) -> Dict[str, BigFivePersonalityTrait]:
+        return self._traits
 
     def __str__(self) -> str:
-        return f"SimplePersonality(traits={self.traits})"
+        return f"SimplePersonality({', '.join(f'{k}: {v.value:.2f}' for k, v in self.traits.items())})"
 
     def similarity(self, other: 'Personality') -> float:
         if not isinstance(other, SimplePersonality):
             return 0.0
-        return self.cosine_similarity(self.traits, other.traits)
+        return self.cosine_similarity(
+            {k: v.value for k, v in self.traits.items()},
+            {k: v.value for k, v in other.traits.items()}
+        )
 
     @staticmethod
     def cosine_similarity(vec1: Dict[str, float], vec2: Dict[str, float]) -> float:
@@ -141,9 +179,10 @@ class SimplePersonality(Personality):
 if __name__ == "__main__":
     # Create a simple agent with a custom personality
     personality = SimplePersonality({"openness": 0.7, "conscientiousness": 0.6, "extraversion": 0.5, "agreeableness": 0.8, "neuroticism": 0.3})
+    personality2 = SimplePersonality({"openness": 0.3, "conscientiousness": 0.5, "extraversion": 0.8, "agreeableness": 0.8, "neuroticism": 0.7})
     decision_engine = SimpleDecisionEngine()
     agent = SimpleAgent(name="Agent1", personality=personality, expertise=["Expertise1"], decision_engine=decision_engine)
-    agent2 = SimpleAgent(name="Agent2", personality=personality, expertise=["Expertise2"], decision_engine=decision_engine)
+    agent2 = SimpleAgent(name="Agent2", personality=personality2, expertise=["Expertise2"], decision_engine=decision_engine)
 
     # Create the environment
     environment = SimpleEnvironment()
