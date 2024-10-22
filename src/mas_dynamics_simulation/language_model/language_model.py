@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 class LanguageModel(ABC):
     """
@@ -31,7 +31,7 @@ class LanguageModel(ABC):
         pass
 
     @abstractmethod
-    def get_embedding(self, text: str) -> list[float]:
+    def get_embedding(self, text: str) -> List[float]:
         """
         Get the embedding representation of the given text.
 
@@ -39,6 +39,6 @@ class LanguageModel(ABC):
             text (str): The input text to embed.
 
         Returns:
-            list[float]: The embedding vector.
+            List[float]: The embedding vector.
         """
         pass
