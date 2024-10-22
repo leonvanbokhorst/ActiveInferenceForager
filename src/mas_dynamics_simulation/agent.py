@@ -1,6 +1,9 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Any, TYPE_CHECKING, List
 import numpy as np
+import json
+import re
 from mas_dynamics_simulation.language_model.language_model_handler import LanguageModelHandler
 from mas_dynamics_simulation.decision_making import DecisionEngine
 from mas_dynamics_simulation.personality import Personality
@@ -10,6 +13,8 @@ if TYPE_CHECKING:
     from .personality import Personality
     from .decision_making import DecisionEngine
 
+# Set up logging
+logger = logging.getLogger(__name__)
 
 class Agent(ABC):
     """
@@ -58,21 +63,51 @@ class Agent(ABC):
         1. Generate a name: a long, academic or philosophical sounding name for the researcher.
         2. Generate a backstory: from a third person perspective about the researcher's upbringing, education, career, culture, cities, countries, etc. text only.
         3. Generate a bio: from a third person perspective, and without explicitly naming personality traits, openly brag about the researcher's current role, achievements, superpowers, passions, quilty pleasures, and interests. text only.
-        4. Generate a dark secret: a dark secret, awkward secret, or adversarial goal for the researcher. text only.
+        4. Generate a dark secret: a dark secret, awkward secret, traumatic event, strong bias, or adversarial goal for the researcher. text only.
         
         Format the response ONLY as a JSON object with keys 'name', 'backstory', 'bio', 'dark_secret'. No other text or markdown formatting.
         Example: {{"name": "Name text", "backstory": "Backstory text", "bio": "Bio text", "dark_secret": "Dark secret text"}}
         """
-        print(f"\nPrompt: {prompt}")
-        response = language_model_handler.generate_text(prompt)
-        try:
-            import json
-            details = json.loads(response)
-            return details
-        except json.JSONDecodeError:
-            # If JSON parsing fails, return a default dictionary
-            print(f"\nResponse: {response}")
-            return {}
+        logger.info(f"\nPrompt: {prompt}")
+
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            response = language_model_handler.generate_text(prompt)
+            try:
+                details = json.loads(response)
+                
+                # Check for special characters in the values
+                for key, value in details.items():
+                    if not isinstance(value, str):
+                        raise ValueError(f"Value for {key} is not a string")
+                    if re.search(r'[<>{}[\]]', value):
+                        raise ValueError(f"Invalid characters (HTML tags or JSON brackets) in {key}")
+                
+                logger.info(f"Valid response generated on attempt {attempt + 1}")
+                return details
+            except json.JSONDecodeError as e:
+                logger.error(f"\nAttempt {attempt + 1} failed. Invalid JSON: {e}")
+            except ValueError as e:
+                logger.error(f"\nAttempt {attempt + 1} failed. {e}")
+            
+            logger.debug(f"Response: {response}")
+            
+            if attempt == max_attempts - 1:
+                logger.warning("Max attempts reached. Using default values.")
+                return {
+                    "name": "Default Agent",
+                    "backstory": "No backstory available",
+                    "bio": "No bio available",
+                    "dark_secret": "No dark secret available"
+                }
+        
+        # This line should never be reached, but it's here for completeness
+        return {
+            "name": "Default Agent",
+            "backstory": "No backstory available",
+            "bio": "No bio available",
+            "dark_secret": "No dark secret available"
+        }
 
     @property
     def name(self) -> str:
@@ -168,9 +203,7 @@ class Agent(ABC):
         Args:
             message (str): The incoming message or information.
         """
-        # For now, we'll just print the message. In a more complex implementation,
-        # this method might parse the message and update the agent's internal state.
-        print(f"{self.name} is listening: {message}")
+        logger.info(f"{self.name} is listening: {message}")
 
     def think(self, context: Dict[str, Any]) -> str:
         """
@@ -192,6 +225,7 @@ class Agent(ABC):
 
         What are your thoughts or decisions? Respond in first person.
         """
+        logger.debug(f"Thinking prompt: {prompt}")
         return self._language_model_handler.generate_text(prompt)
 
     def memorize(self, information: str) -> None:
@@ -202,6 +236,7 @@ class Agent(ABC):
             information (str): The information to be memorized.
         """
         self._memory.append(information)
+        logger.debug(f"{self.name} memorized: {information}")
 
     def remember(self, query: str) -> str:
         """
@@ -222,6 +257,7 @@ class Agent(ABC):
 
         What information can be recalled that's relevant to the query? If nothing is relevant, state that no relevant information was found.
         """
+        logger.debug(f"Remember prompt: {prompt}")
         return self._language_model_handler.generate_text(prompt)
 
     def talk(self, message: str) -> str:
@@ -244,7 +280,10 @@ class Agent(ABC):
 
         Provide a response in first person, staying in character.
         """
-        return self._language_model_handler.generate_text(prompt)
+        logger.debug(f"Talk prompt: {prompt}")
+        response = self._language_model_handler.generate_text(prompt)
+        logger.info(f"{self.name} says: {response}")
+        return response
 
 
 class Action(ABC):
@@ -287,6 +326,7 @@ class Action(ABC):
             str: A string representation of the Action.
         """
         pass
+
 
 
 

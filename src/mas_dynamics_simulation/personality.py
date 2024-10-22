@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Union
@@ -194,6 +195,8 @@ class BigFivePersonality(Personality):
             for trait_name, value in traits.items():
                 self[trait_name.lower()] = value
 
+        self.logger = logging.getLogger(__name__)
+
     @property
     def traits(self) -> Dict[str, BigFivePersonalityTrait]:
         return self._traits
@@ -259,7 +262,7 @@ class BigFivePersonality(Personality):
 
     def __str__(self) -> str:
         return ", ".join(
-            f"{self._get_level_description(trait.value).lower()} {trait.name.lower()}"
+            f"{self._get_level_description(trait.value).lower()} {trait.name.lower()} ({trait.value*100:.0f}%)"
             for trait in self.traits.values()
         )
 
@@ -368,25 +371,32 @@ class BigFivePersonality(Personality):
         for trait, (mean, std_dev) in trait_params.items():
             value = cls._generate_realistic_value(mean, std_dev, volatility)
             random_traits[trait] = value
+            logging.debug(f"Generated {trait} value: {value:.2f}")
 
         if np.random.random() < 0.6:  # 60% chance of correlated traits
+            logging.info("Applying trait correlations")
             if random_traits["conscientiousness"] > 0.6:
                 random_traits["neuroticism"] = min(
                     random_traits["neuroticism"],
                     cls._generate_realistic_value(0.4, 0.15, volatility),
                 )
+                logging.debug(f"Adjusted neuroticism: {random_traits['neuroticism']:.2f}")
             if random_traits["extraversion"] > 0.6:
                 random_traits["openness"] = max(
                     random_traits["openness"],
                     cls._generate_realistic_value(0.6, 0.15, volatility),
                 )
+                logging.debug(f"Adjusted openness: {random_traits['openness']:.2f}")
             if random_traits["neuroticism"] > 0.7:
                 random_traits["extraversion"] = min(
                     random_traits["extraversion"],
                     cls._generate_realistic_value(0.4, 0.15, volatility),
                 )
+                logging.debug(f"Adjusted extraversion: {random_traits['extraversion']:.2f}")
 
-        return cls(random_traits)
+        personality = cls(random_traits)
+        logging.info(f"Generated {variation} personality: {personality}")
+        return personality
 
     def similarity_description(
         self, other: "BigFivePersonality", other_name: str
@@ -420,3 +430,5 @@ class DefaultPersonality(Personality):
     def similarity(self, other: "Personality") -> float:
         # Implement a basic similarity measure
         return 0.5 if isinstance(other, DefaultPersonality) else 0.0
+
+

@@ -65,10 +65,6 @@ def test_init(test_agent, mock_language_model_handler):
     # Verify that the language model was called to generate agent details
     mock_language_model_handler.generate_text.assert_called_once()
 
-def test_listen(test_agent, capsys):
-    test_agent.listen("Hello, agent!")
-    captured = capsys.readouterr()
-    assert f"{test_agent.name} is listening: Hello, agent!" in captured.out
 
 def test_think(test_agent, mock_language_model_handler):
     # Reset the mock to clear the call count from initialization

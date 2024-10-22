@@ -108,11 +108,11 @@ def test_big_five_personality_compare():
 def test_big_five_personality_str_representation():
     personality = BigFivePersonality({"openness": 0.9, "conscientiousness": 0.6, "extraversion": 0.5, "agreeableness": 0.1, "neuroticism": 0.3})
     str_rep = str(personality)
-    assert "Openness: 90.0% - Very High" in str_rep
-    assert "Conscientiousness: 60.0% - High" in str_rep
-    assert "Extraversion: 50.0% - Moderate" in str_rep
-    assert "Agreeableness: 10.0% - Very Low" in str_rep
-    assert "Neuroticism: 30.0% - Low" in str_rep
+    assert "very high openness" in str_rep
+    assert "high conscientiousness" in str_rep
+    assert "moderate extraversion" in str_rep
+    assert "very low agreeableness" in str_rep
+    assert "low neuroticism" in str_rep
 
 def test_big_five_personality_get_level_description():
     assert BigFivePersonality._get_level_description(0.1) == "Very Low"

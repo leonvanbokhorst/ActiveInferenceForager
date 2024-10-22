@@ -1,4 +1,5 @@
 import unittest
+import logging
 from mas_dynamics_simulation.agent import Agent, Action
 from mas_dynamics_simulation.language_model.ollama_model import OllamaModel
 from mas_dynamics_simulation.language_model.language_model_handler import LanguageModelHandler
@@ -56,6 +57,10 @@ class Action:
 
 class TestAgentIntegration(unittest.TestCase):
     def setUp(self):
+        # Set up logging
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger(__name__)
+
         self.model_params = {
             'base_url': 'http://localhost:11434',
             'model_name': 'mistral-nemo'
@@ -64,21 +69,23 @@ class TestAgentIntegration(unittest.TestCase):
         self.language_model_handler.initialize(OllamaModel, self.model_params)
 
     def test_agent_initialization(self):
-        expertise = ["Human-machine interaction", "Bias and fairness in AI"]
+        expertise = ["Project Management", "Leadership", "Teamwork", "Communication", "Problem Solving", "Adaptability", "Innovation", "Critical Thinking"]
         decision_engine = MockDecisionEngine()
         personality = BigFivePersonality.random()
         agent = ConcreteAgent(expertise, decision_engine, self.language_model_handler, personality)
 
-        print(f"\nAgent Name: {agent.name}\n")
-        print(f"Agent Backstory: \n{agent.backstory}\n")
-        print(f"Agent Bio: \n{agent.bio}\n")
-        print(f"Agent Dark Secret: \n{agent.dark_secret}\n")
         self.assertIsNotNone(agent.name)
         self.assertIsNotNone(agent.backstory)
         self.assertIsNotNone(agent.bio)
+        self.assertIsNotNone(agent.dark_secret)
         self.assertEqual(agent.expertise, tuple(expertise))
         self.assertIsInstance(agent.decision_engine, MockDecisionEngine)
         self.assertIsInstance(agent.personality, BigFivePersonality)
+        
+        self.logger.info(f"Agent Name: {agent.name}")
+        self.logger.info(f"Agent Backstory: {agent.backstory}")
+        self.logger.info(f"Agent Bio: {agent.bio}")
+        self.logger.info(f"Agent Dark Secret: {agent.dark_secret}")
 
 
 if __name__ == '__main__':
