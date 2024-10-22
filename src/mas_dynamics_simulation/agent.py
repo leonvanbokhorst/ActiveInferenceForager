@@ -63,7 +63,7 @@ class Agent(ABC):
         1. Generate a name: a long, academic or philosophical sounding name for the researcher.
         2. Generate a backstory: from a third person perspective about the researcher's upbringing, education, career, culture, cities, countries, etc. text only.
         3. Generate a bio: from a third person perspective, and without explicitly naming personality traits, openly brag about the researcher's current role, achievements, superpowers, passions, quilty pleasures, and interests. text only.
-        4. Generate a dark secret: a dark secret, awkward secret, traumatic event, strong bias, or adversarial goal for the researcher. text only.
+        4. Generate a dark secret: an awkward secret, traumatic events, or strong biases for the researcher. text only.
         
         Format the response ONLY as a JSON object with keys 'name', 'backstory', 'bio', 'dark_secret'. No other text or markdown formatting.
         Example: {{"name": "Name text", "backstory": "Backstory text", "bio": "Bio text", "dark_secret": "Dark secret text"}}
