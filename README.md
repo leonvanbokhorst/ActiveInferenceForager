@@ -31,89 +31,26 @@ For a detailed explanation of the Free Energy Principle and Active Inference, pl
 ## Key Components
 
 1. LLM Proactive Agent: An advanced chatbot implementing Active Inference principles.
-
-   ```python:src/active_inference_forager/llm_proactive_agent.py
-   startLine: 1
-   endLine: 218
-   ```
-
 2. Goal Seeker: Manages the agent's goals and decision-making process.
-
-   ```python:src/active_inference_forager/managers/goal_seeker.py
-   startLine: 1
-   endLine: 228
-   ```
-
 3. Rapport Builder: Handles user interaction and relationship building.
-
-   ```python:src/active_inference_forager/managers/rapport_builder.py
-   startLine: 1
-   endLine: 26
-   ```
-
 4. OpenAI Provider: Integrates with OpenAI's language models for natural language processing.
-
-   ```python:src/active_inference_forager/providers/openai_provider.py
-   startLine: 1
-   endLine: 57
-   ```
 
 ## Multi-Agent System (MAS) Dynamics Simulation
 
 The MAS dynamics simulation framework allows for modeling complex interactions between multiple agents in various environments. Key components include:
 
 1. Agent: Abstract base class for implementing various types of agents.
-
-   ```python:src/mas_dynamics_simulation/agent.py
-   startLine: 1
-   endLine: 147
-   ```
-
 2. Environment: Represents the world in which agents operate.
-
-   ```python:src/mas_dynamics_simulation/environment.py
-   startLine: 1
-   endLine: 84
-   ```
-
 3. Personality: Implements the Big Five personality model for agents.
-
-   ```python:src/mas_dynamics_simulation/personality.py
-   startLine: 1
-   endLine: 158
-   ```
-
 4. Decision Making: Handles agent decision-making processes.
-
-   ```python:src/mas_dynamics_simulation/decision_making.py
-   startLine: 1
-   endLine: 98
-   ```
 
 ## Proofs of Concept (POCs)
 
 The project includes several POCs demonstrating key concepts:
 
-1. Variational Free Energy Minimization:
-
-   ```python:src/poc/variational_free_energy.py
-   startLine: 1
-   endLine: 26
-   ```
-
-2. Prediction Error Propagation:
-
-   ```python:src/poc/prediction_error_propagation.py
-   startLine: 1
-   endLine: 89
-   ```
-
-3. VFE Minimization:
-
-   ```python:src/poc/vfe_minimization.py
-   startLine: 1
-   endLine: 50
-   ```
+1. Variational Free Energy Minimization
+2. Prediction Error Propagation
+3. VFE Minimization
 
 These POCs provide practical implementations of core Active Inference concepts and serve as building blocks for more complex agent behaviors.
 
