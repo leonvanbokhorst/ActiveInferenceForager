@@ -38,9 +38,20 @@ class Agent(ABC):
         self._backstory = details.get('backstory', 'No backstory available')
         self._bio = details.get('bio', 'No bio available')
         self._dark_secret = details.get('dark_secret', 'No dark secret available')
+        self._hobbies = details.get('hobbies', '')
+        self._interests = details.get('interests', '')
+        self._goals = details.get('goals', '')
+        self._fears = details.get('fears', '')
+        self._strengths = details.get('strengths', '')
+        self._weaknesses = details.get('weaknesses', '')
+        self._quirks = details.get('quirks', '')
+        self._public_behavior = details.get('public_behavior', '')
+        self._private_behavior = details.get('private_behavior', '')
+        self._health_issues = details.get('health_issues', '')  
         self._expertise = tuple(expertise)  # Make expertise immutable
         self._decision_engine = decision_engine
         self._personality = personality
+
         self._memory = []  # Initialize an empty memory
 
     @classmethod
@@ -60,13 +71,23 @@ class Agent(ABC):
         Given a researcher is a well-regarded expert in these fields: {', '.join(expertise)} 
         Furthermore, they have the following Big Five personality traits: {personality}, and very distinct character traits.
         
-        1. Generate a name: a long, academic or philosophical sounding name for the researcher.
+        1. Generate a name: a long, serious, realistic, cademic name in Honorific Style with using titles like Dr., Prof., Mr., Mrs. and middle names initials only for the researcher.
         2. Generate a backstory: from a third person perspective about the researcher's upbringing, education, career, culture, cities, countries, etc. text only.
         3. Generate a bio: from a third person perspective, and without explicitly naming personality traits, openly brag about the researcher's current role, achievements, superpowers, passions, quilty pleasures, and interests. text only.
-        4. Generate a dark secret: an awkward secret, traumatic events, or strong biases for the researcher. text only.
+        4. Generate a dark secret: awkward secrets, traumatic events, and/or strong biases for the researcher related to their background, upbringing, culture, etc. text only.
+        5. Generate a hobbies of the researcher that are related to their personality, expertise, upbringing, and interests. Text only.    
+        6. Generate a interests of the researcher that are related to their personality, expertise, upbringing, and hobbies. Text only.
+        7. Generate a goals of the researcher that are related to their personality, expertise, upbringing, and interests. Text only.
+        8. Generate a fears of the researcher that are related to their personality, expertise, upbringing, and interests. Text only.
+        9. Generate a strengths of the researcher that are related to their personality, expertise, upbringing, and interests. Text only.
+        10. Generate a weaknesses of the researcher that are related to their personality, expertise, upbringing, and interests. Text only.
+        11. Generate a quirks of the researcher that are related to their personality, expertise, upbringing, and interests. Text only.
+        12. Generate a typical public behavior of the researcher that is related to their personality, expertise, upbringing, and interests . Text only.
+        13. Generate a typical private behavior of the researcher that is related to their personality, expertise, upbringing, and interests. Text only.
+        14. Generate health issues of the researcher that are related to their personality, expertise, upbringing, and interests. Text only.
         
-        Format the response ONLY as a JSON object with keys 'name', 'backstory', 'bio', 'dark_secret'. No other text or markdown formatting.
-        Example: {{"name": "Name text", "backstory": "Backstory text", "bio": "Bio text", "dark_secret": "Dark secret text"}}
+        Format the response ONLY as a JSON object with keys 'name', 'backstory', 'bio', 'dark_secret', 'hobbies', 'interests', 'goals', 'fears', 'strengths', 'weaknesses', 'quirks', 'public_behavior', 'private_behavior', 'health_issues'. No other text or markdown formatting.
+        Example: {{"name": "Name text", "backstory": "Backstory text", "bio": "Bio text", "dark_secret": "Dark secret text", "hobbies": "Hobby 1, Hobby 2, Hobby 3", "interests": "Interest 1, Interest 2, Interest 3", "goals": "Goal 1, Goal 2, Goal 3", "fears": "Fear 1, Fear 2, Fear 3", "strengths": "Strength 1, Strength 2, Strength 3", "weaknesses": "Weakness 1, Weakness 2, Weakness 3", "quirks": "Quirk 1, Quirk 2, Quirk 3", "public_behavior": "Public behavior text", "private_behavior": "Private behavior text", "health_issues": "Health issue text"}}
         """
         logger.info(f"\nPrompt: {prompt}")
 
@@ -98,7 +119,14 @@ class Agent(ABC):
                     "name": "Default Agent",
                     "backstory": "No backstory available",
                     "bio": "No bio available",
-                    "dark_secret": "No dark secret available"
+                    "dark_secret": "No dark secret available",
+                    "hobbies": "",
+                    "interests": "",
+                    "goals": "",
+                    "fears": "",
+                    "strengths": "",
+                    "weaknesses": "",
+                    "quirks": ""
                 }
         
         # This line should never be reached, but it's here for completeness
@@ -106,7 +134,14 @@ class Agent(ABC):
             "name": "Default Agent",
             "backstory": "No backstory available",
             "bio": "No bio available",
-            "dark_secret": "No dark secret available"
+            "dark_secret": "No dark secret available",
+            "hobbies": "",
+            "interests": "",
+            "goals": "",
+            "fears": "",
+            "strengths": "",
+            "weaknesses": "",
+            "quirks": ""
         }
 
     @property
@@ -136,6 +171,50 @@ class Agent(ABC):
     @property
     def dark_secret(self) -> str:
         return self._dark_secret
+    
+    @property
+    def hobbies(self) -> str:
+        return self._hobbies
+    
+    @property
+    def interests(self) -> str:
+        return self._interests
+    
+    @property
+    def goals(self) -> str:
+        return self._goals
+    
+    @property
+    def fears(self) -> str:
+        return self._fears
+    
+    @property
+    def strengths(self) -> str:
+        return self._strengths
+    
+    @property
+    def weaknesses(self) -> str:
+        return self._weaknesses
+    
+    @property
+    def quirks(self) -> str:
+        return self._quirks
+    
+    @property
+    def public_behavior(self) -> str:
+        return self._public_behavior
+    
+    @property
+    def private_behavior(self) -> str:
+        return self._private_behavior
+    
+    @property
+    def health_issues(self) -> str:
+        return self._health_issues
+    
+    @property
+    def memory(self) -> List[str]:
+        return self._memory
 
     @abstractmethod
     def perceive(self, environment: "Environment") -> Dict[str, Any]:
