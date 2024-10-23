@@ -4,6 +4,8 @@
 
 ActiveInferenceForager is an open-source action research project that implements an intelligent agent using principles from Active Inference, a neuroscientific theory of brain function and decision-making. This project aims to bridge the gap between theoretical neuroscience and practical AI applications, creating adaptive agents capable of learning and making decisions in complex, dynamic environments.
 
+**Current MAS Dynamics Research repo**: https://github.com/leonvanbokhorst/lab-politik
+
 ## Table of Contents
 
 - [ActiveInferenceForager](#activeinferenceforager)
